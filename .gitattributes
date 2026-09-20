@@ -1,0 +1,9 @@
+# 跨平台行尾统一：仓库里一律存 LF，工作区按各自系统。
+# 不加这个，Windows 同学和 mac 同学之间会出现整文件级别的假 diff。
+* text=auto
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.sh  text eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
