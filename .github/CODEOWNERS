@@ -2,30 +2,34 @@
 #
 # 作用：PR 改到某个路径时，GitHub 会自动把对应负责人加为 reviewer。
 #
-# ⚠️ 启用前必须把下面的占位账号（@contract-owner 等）替换成本仓库里真实的
-#    GitHub 用户名或团队（@组织/团队名）。未替换时这些规则不会匹配到任何人。
+# 现状：当前所有路径统一指向 @scnu001（团队规模小，一人多角色）。
+#       当分工细化后，把对应行的 @scnu001 换成该角色的真实 GitHub 账号
+#       或团队名（形如 @组织/团队名）。保留角色分组注释便于后续拆分。
+#
+# 注意：CODEOWNERS 只有在分支保护里勾选 "Require review from Code Owners" 后
+#       才会强制生效，否则仅作为 reviewer 的默认推荐。
 #
 # 语法：<路径模式>  <@用户名 或 @组织/团队> ...
 
 # 默认：没有命中下面任何规则的文件
-*                           @your-handle
+*                           @scnu001
 
 # 合约与合约测试 —— 改动影响全员，必须由合约负责人 review
-/contracts/                 @contract-owner
-/test/                      @contract-owner
+/contracts/                 @scnu001
+/test/                      @scnu001
 
 # 钱包层 —— useWallet.js 是公共资产
-/frontend/src/hooks/        @wallet-owner
-/wallet-login/              @wallet-owner
+/frontend/src/hooks/        @scnu001
+/wallet-login/              @scnu001
 
 # UI 组件 —— 并行度最高、冲突最少的区域
-/frontend/src/components/   @ui-owner
-/frontend/src/styles/       @ui-owner
+/frontend/src/components/   @scnu001
+/frontend/src/styles/       @scnu001
 
 # 部署与运维
-/scripts/                   @deploy-owner
-/deployments/               @deploy-owner
+/scripts/                   @scnu001
+/deployments/               @scnu001
 
 # 文档
-/README.md                  @docs-owner
-/CONTRIBUTING.md            @docs-owner
+/README.md                  @scnu001
+/CONTRIBUTING.md            @scnu001

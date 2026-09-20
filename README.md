@@ -9,6 +9,7 @@
 [![Ethers](https://img.shields.io/badge/Ethers-6.x-2535a0)](https://docs.ethers.org/v6/)
 [![React](https://img.shields.io/badge/React-18-61dafb)](https://react.dev/)
 [![Network](https://img.shields.io/badge/Network-Sepolia%20(0xaa36a7)-8A2BE2)](https://sepolia.etherscan.io/)
+[![Repo](https://img.shields.io/badge/GitHub-scnu001%2FDAPP-181717?logo=github)](https://github.com/scnu001/DAPP)
 
 ---
 
@@ -79,6 +80,7 @@
 | 合约 owner / 主办方 | [`0xa168dA3C44f8Aa8251499A71082da584814C041C`](https://sepolia.etherscan.io/address/0xa168dA3C44f8Aa8251499A71082da584814C041C) |
 | 测试参与者账户 | [`0xd40C8610d18119cd8C7A5B44Aaa2981cDC0b3E73`](https://sepolia.etherscan.io/address/0xd40C8610d18119cd8C7A5B44Aaa2981cDC0b3E73) |
 | 名字 / 符号 | `COMP7610 Ticket` / `TKT` |
+| 代码仓库 | <https://github.com/scnu001/DAPP>（`main` = 交付分支，`develop` = 集成分支）|
 
 随时可跑只读自查（不发交易）：
 
@@ -182,7 +184,7 @@ comp7610-ticket-dapp/
 
 ```bash
 # 1) 克隆
-git clone <repo-url>
+git clone https://github.com/scnu001/DAPP.git comp7610-ticket-dapp
 cd comp7610-ticket-dapp
 
 # 2) 合约依赖（根目录）
@@ -539,7 +541,7 @@ Squash Merge 到 develop
 ### 11.1 第一次加入：5 分钟上手
 
 ```bash
-git clone <repo-url> && cd comp7610-ticket-dapp
+git clone https://github.com/scnu001/DAPP.git comp7610-ticket-dapp && cd comp7610-ticket-dapp
 npm install
 cp .env.example .env          # 只有需要部署合约的人才需要填私钥
 cd frontend && npm install && cp .env.example .env

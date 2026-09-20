@@ -8,7 +8,7 @@
 ## 1. 环境准备
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/scnu001/DAPP.git comp7610-ticket-dapp
 cd comp7610-ticket-dapp
 npm install
 cp .env.example .env                    # 只有需要部署合约的人才填私钥
