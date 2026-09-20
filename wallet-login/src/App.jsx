@@ -6,7 +6,7 @@
  *   1) 组装真实组件（NetworkBadge + ConnectWalletButton），跟原项目里的用法一模一样；
  *   2) 把 useWallet 暴露的原始状态打印出来，方便观察状态机怎么跳。
  *
- * ⚠️ 页面上这几个 class 是 e2e/wallet-login.mjs 依赖的契约，改样式可以、改结构要同步改脚本：
+ * 页面上这几个 class / 文案是稳定锚点，改样式可以，改结构或文案请同步更新 README：
  *      .account-addr   连接成功后显示地址
  *      .network-badge  网络徽章（内含「切换到 Sepolia」按钮）
  *      .banner-warn    网络不对时的黄条
@@ -45,7 +45,7 @@ function Demo() {
         </div>
       </header>
 
-      {/* 网络不对 → 黄条（e2e 用 .banner-warn + "当前网络不是 Sepolia" 定位，文案别改） */}
+      {/* 网络不对 → 黄条（页面上只保留这一条 .banner-warn） */}
       {status === "wrongNetwork" ? (
         <div className="banner banner-warn">
           当前网络不是 Sepolia（0xaa36a7）。点右上角「切换到 Sepolia」发起切换，或在 MetaMask
@@ -135,7 +135,7 @@ function Demo() {
 
       <footer className="app-footer">
         <span className="muted small">
-          独立钱包模块 · 完整交互验证见 <code>e2e/run-wallet-login.mjs</code>
+          独立钱包模块 · 不含任何合约业务 · 可直接移植到其它项目
         </span>
       </footer>
     </div>

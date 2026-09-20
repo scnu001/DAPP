@@ -158,13 +158,6 @@ comp7610-ticket-dapp/
 └─ README.md                   # 你正在看的这份
 ```
 
-### 关于 `e2e/`（不在本仓库）
-
-开发时我们写了 5 个**真实 MetaMask 端到端脚本**（`wallet-login.mjs`、`mint-flow.mjs`、
-`mm-utils.mjs`、`debug-chainchange.mjs`、`open-manual-demo.mjs`），用真浏览器 + 真钱包扩展代替人工点击。
-**它们按团队约定不随仓库分发**，原因见 [FAQ 第 11 条](#q11为什么仓库里没有-e2e-脚本)；
-验证结果记录在[第八节](#八测试与质量保障)。
-
 ---
 
 ## 五、环境依赖与安装步骤
@@ -178,7 +171,6 @@ comp7610-ticket-dapp/
 | **git** | ≥ 2.30 | 版本管理 | `git --version` |
 | **MetaMask** | 浏览器扩展 13.x | 连接钱包、签名交易 | 浏览器扩展页可见 |
 | Sepolia ETH | ≥ 0.01 ETH | 付部署与领取的 gas | 见 [FAQ 第 10 条](#q10没有-sepolia-eth-去哪领) |
-| 系统 Edge（可选） | 任意较新版本 | 仅真钱包 E2E 需要 | 已在仓库外 |
 
 ### 5.2 安装
 
@@ -245,7 +237,7 @@ npm run preview   # 预览构建产物
 
 Windows 上也可以直接双击 `frontend/启动本地服务.cmd`（依赖缺失会自动先装）。
 
-> ⚠️ **`frontend/` 与 `wallet-login/` 都监听 5173，不能同时启动**（这是刻意的，为了让 E2E 脚本一行都不用改）。
+> ⚠️ **`frontend/` 与 `wallet-login/` 都监听 5173，不能同时启动**（两个项目共用同一端口，跑其中一个前先停掉另一个）。
 
 ### 6.3 钱包登录模块（独立版）
 
@@ -315,7 +307,7 @@ event EventClosed  (uint256 indexed eventId, uint32 totalMinted);
 
 ## 八、测试与质量保障
 
-三层验证，从快到慢：
+验证分三层，从快到慢（另附一份手工验收清单）：
 
 ### 8.1 单元测试（秒级，任何人可跑）
 
@@ -366,19 +358,7 @@ eventCount     : 4
   #4 E2E Concert 07:41:25        | minted=1/10 open=false | 参与者ticketOf=3
 ```
 
-### 8.4 真实 MetaMask 端到端（开发期做过，脚本未随仓库分发）
-
-用 Playwright 驱动**真实系统 Edge + MetaMask 13.49 扩展**，覆盖：
-
-| 套件 | 检查项 | 结果 |
-| --- | --- | --- |
-| `wallet-login` | 全新 profile onboarding / 点击连接 + 真实授权弹窗 / Sepolia 校验 / **刷新静默恢复** / 切主网 → `wrongNetwork` 横幅 + 一键切回 / 换账号 | 5/5 ✅ |
-| `mint-flow` | 主办方连接 + `owner()` 角色判定 / `createEvent` + `EventCreated` 解析 / 换参与者 `claim` + 「我的门票」面板 / 链上 `ticketOf`+`ownerOf`+`tokenURI` + 重复领取 revert / `closeEvent` 前端变「已关闭」 | 5/5 ✅ |
-| `wallet-login`（对 `wallet-login/` 独立项目跑） | 同上六项 | 6/6 ✅（退出码 0，128s） |
-
-实测 gas：主办方整场花费 **0.00016 ETH**，参与者 **0.00015 ETH**（Sepolia 约 1 gwei）。
-
-### 8.5 手工验收清单（提 PR 前自己过一遍）
+### 8.4 手工验收清单（提 PR 前自己过一遍）
 
 - [ ] `npm test` 全绿
 - [ ] `cd frontend && npm run build` 无报错
@@ -593,7 +573,7 @@ git checkout develop && git pull                # 6. 回到 develop 同步
 - **每日**：站会同步三件事 —— 昨天做了什么 / 今天做什么 / 卡在哪。
 - **每周**：把 `develop` 合到 `main`，打一个 tag（`v0.2.0` 这样），并更新 CHANGELOG（可选）。
 - **里程碑**：部署一次到 Sepolia，全员更新 `frontend/.env` 里的合约地址。
-- **交付前**：跑一遍 [8.5 手工验收清单](#85-手工验收清单提-pr-前自己过一遍)，并确认仓库里**没有 `.env`**。
+- **交付前**：跑一遍 [8.4 手工验收清单](#84-手工验收清单提-pr-前自己过一遍)，并确认仓库里**没有 `.env`**。
 
 ### 11.6 新同学 onboarding 清单
 
@@ -655,7 +635,7 @@ node node_modules/hardhat/internal/cli/cli.js run scripts/deploy.js --network se
 
 ### Q7：端口 5173 被占用 / 两个项目不能同时跑？
 
-`frontend/` 与 `wallet-login/` **都刻意监听 5173**（为了让 E2E 脚本一行都不用改）。
+`frontend/` 与 `wallet-login/` **都监听 5173**（两个项目共用同一端口，跑其中一个前先停掉另一个）。
 跑其中一个之前先停掉另一个。查占用：
 
 ```bash
@@ -687,15 +667,7 @@ node scripts/verify-sepolia.mjs
 从 Sepolia 水龙头领（如 `sepoliafaucet.com`、Alchemy 的 Sepolia faucet）。
 一次演示大概只需要 **0.001 ETH**（实测主办方整场 0.00016 ETH，参与者 0.00015 ETH）。
 
-### Q11：为什么仓库里没有 `e2e/` 脚本？
-
-那些脚本依赖**仓库外**的 MetaMask 扩展目录与特定版本的浏览器扩展，别人 clone 下来跑不动，
-所以按团队约定不随仓库分发（脚本保留在开发者本机）。验证结论记录在
-[第八节 8.4](#84-真实-metamask-端到端开发期做过脚本未随仓库分发)。
-如果你想自己搭一套，思路是：用 Playwright 起一个带钱包扩展的持久化浏览器 profile，
-把"解锁钱包 / 点确认 / 切网络 / 换账户"做成公共工具函数，再用它驱动前端页面断言。
-
-### Q12：改了 `useWallet.js`，`wallet-login/` 那份要跟着改吗？
+### Q11：改了 `useWallet.js`，`wallet-login/` 那份要跟着改吗？
 
 **要**。`wallet-login/src/hooks/useWallet.js` 与 `frontend/src/hooks/useWallet.js` 是**逐字一致**的
 （只差一处 import 路径：`../lib/contract` ↔ `../lib/chain`）。改了任意一边，

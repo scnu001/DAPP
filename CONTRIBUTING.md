@@ -88,7 +88,7 @@ npm test          # 全绿
 
 - `.env`（含私钥）、任何私钥/助记词文本
 - `node_modules/`、`artifacts/`、`cache/`、`dist/`
-- `e2e/`（按团队约定不入库）、浏览器 profile（`.edge-*`，单个 100MB+）、日志、截图
+- 浏览器 profile（`.edge-*`，单个 100MB+）、日志、截图等本地产物
 
 ---
 
