@@ -1,0 +1,77 @@
+# 最小 CI：合约测试 + 前端构建
+#
+# 课程若不用 GitHub Actions，直接删掉这个文件即可，不影响任何功能。
+# 启用后建议在 Settings → Branches 把 "ci" 设为 main / develop 的必需检查项。
+
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  contract:
+    name: 合约测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 编译 + 跑单元测试
+        run: npm test
+
+      - name: 确认 remix 导出脚本可用
+        run: npm run export:remix
+
+  frontend:
+    name: 前端构建
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装依赖
+        working-directory: frontend
+        run: npm ci
+
+      - name: 构建
+        working-directory: frontend
+        # 没配 .env 也能构建成功（页面会提示「未配置合约地址」）。
+        # 想让 CI 构建出的产物带着真实合约地址，就在仓库 Variables 里设 VITE_CONTRACT_ADDRESS。
+        env:
+          VITE_CONTRACT_ADDRESS: ${{ vars.VITE_CONTRACT_ADDRESS }}
+        run: npm run build
+
+  wallet-login:
+    name: 钱包模块构建
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: wallet-login/package-lock.json
+
+      - name: 安装依赖
+        working-directory: wallet-login
+        run: npm ci
+
+      - name: 构建
+        working-directory: wallet-login
+        run: npm run build
