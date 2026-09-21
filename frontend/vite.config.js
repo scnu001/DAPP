@@ -12,6 +12,11 @@ export default defineConfig({
     alias: {
       "@wallet": walletSrc,
     },
+    // 必须 dedupe：shared/wallet 在项目根之外，它 import 的 ethers 会沿目录向上找到
+    // 仓库根目录的 node_modules/ethers（根是 Hardhat 项目，本来就装了 ethers），
+    // 导致 ethers 被打进两份（白胖 + 两个副本的 Contract/Signer 实例可能对不上）。
+    // dedupe 强制这些依赖统一从本项目的 node_modules 解析。
+    dedupe: ["ethers", "react", "react-dom"],
   },
   server: {
     port: 5173,
