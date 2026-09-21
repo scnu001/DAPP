@@ -1,10 +1,14 @@
-# 钱包登录模块（独立版）
+# `wallet-login/` —— 共享钱包模块的演示壳
 
-从 COMP7610 门票 DApp（`../frontend`）里**只把「连接钱包」这一层抽出来**的可独立运行项目。
-不含任何合约 ABI、不发交易、不调后端、不产生 token —— 就是一个干净的「连接钱包 + 网络管理」模块。
+这个目录**不含任何钱包实现代码**。它只是 [`shared/wallet`](../shared/wallet)（别名 `@wallet`）的一个消费者，
+存在的意义有两个：
 
-> 一句话理解它：它做的事是**读写 `window.ethereum`**，产出 `{ account, chainId, provider, signer, status }`。
-> 「连接钱包」不等于「登录」——没有会话、没有 token，拿到的只是一个公开地址。
+1. 回答「一个页面要怎么装配这个钱包模块」—— 包一层 `<WalletProvider>`，取状态，放组件；
+2. 把 `useWalletContext()` 的**原始输出**打成表格，方便观察状态机怎么跳；
+3. 顺带作为**钱包层改动的快速回归入口**（跑一次冒烟几秒钟）。
+
+> 一句话理解：**钱包的实现看 `../shared/wallet/`，本目录只是一个壳 + 一张状态表。**
+> 「连接钱包」不等于「登录」—— 没有会话、没有 token，拿到的只是一个公开地址。
 
 ---
 
@@ -16,17 +20,35 @@ npm install
 npm run dev          # → http://127.0.0.1:5173/
 ```
 
-打开页面后点右上角「连接钱包」，MetaMask 会弹授权窗；授权后会自动校验/切换到 Sepolia。
+打开页面后点右上角「连接钱包」，MetaMask 会弹授权窗；授权后会自动校验 / 切换到 Sepolia。
 
 > ⚠️ 端口刻意锁在 **5173**，和 `../frontend` 一样。代价是**两个项目不能同时启动** ——
 > 跑这个之前先把 `../frontend` 的 dev server 关掉。
 
+### 快速回归（不需要 MetaMask）
+
+```bash
+cd ../e2e
+node smoke-shared-wallet.mjs wallet-login     # 注入假钱包跑 4 个场景，约 15 秒
+```
+
+会验证：无钱包 → `noMetaMask`；已连 Sepolia → 连接态；钱包在主网 → 黄条 + 一键切换（并断言真的发出了
+`wallet_switchEthereumChain`）；点「断开」→ 断言真的发出了 `wallet_revokePermissions`。
+脚本会自己起 / 关 dev server（`e2e/` 不入库）。
+
+真钱包 E2E：
+
+```bash
+node e2e/run-wallet-login.mjs     # 转调父仓库的 ../e2e/wallet-login.mjs
+```
+
 ### 页面锚点约定
 
-`App.jsx` 里有几个**稳定的 class 名与按钮文案**，改 UI 时请一并维护（它们同时是样式钩子）：
+页面里有几处**稳定的 class 名与按钮文案**，自动化脚本依赖它们。改 UI 时请一并维护
+（它们同时是样式钩子）：
 
-- `.account-addr` —— 连接成功后显示地址
-- `.network-badge` —— 网络徽章
+- `.account-addr` —— 连接成功后显示地址（`title` 属性上是**完整**地址，别拿显示的缩略串去比）
+- `.network-badge`（`.ok` / `.bad`）—— 网络徽章与状态
 - **唯一一条** `.banner-warn`（文案含「当前网络不是 Sepolia」）
 - `.inline-error` —— 错误文案
 - 按钮文案：「连接钱包」/「断开」/「切换到 Sepolia」
@@ -38,45 +60,39 @@ npm run dev          # → http://127.0.0.1:5173/
 ```
 wallet-login/
 ├─ index.html                     入口 HTML（只挂 #root）
-├─ vite.config.js                 React 插件 + 端口 5173
-├─ package.json                   React 18 / Vite 5 / Ethers 6（与大项目完全一致）
-├─ .env.example                   唯一的配置项是可选只读 RPC；本模块其实不需要
+├─ vite.config.js                  React 插件 + @wallet 别名 + 端口 5173
+├─ package.json                    React 18 / Vite 5 / Ethers 6（与父项目一致）
+├─ .env.example                    唯一配置项是可选只读 RPC；本壳其实不需要
+├─ e2e/run-wallet-login.mjs       真钱包 E2E（转调父仓库脚本，不复制代码）
 └─ src/
-   ├─ main.jsx                    挂载 + 引入样式
-   ├─ App.jsx                     演示页：组装组件 + 打印 useWallet 的原始状态
-   ├─ styles/wallet.css           只摘出钱包相关的 CSS（.btn* / .account-* / .network-badge / .banner*）
-   ├─ context/WalletContext.jsx   把 useWallet 的状态挂到 Context，免 props 透传
-   ├─ components/
-   │  ├─ ConnectWalletButton.jsx   「连接钱包 / 断开」按钮（纯展示）
-   │  └─ NetworkBadge.jsx          网络徽章 + 「切换到 Sepolia」（纯展示）
-   ├─ hooks/useWallet.js          ★ 核心：唯一碰 window.ethereum 的文件
-   └─ lib/
-      ├─ chain.js                 链常量（Sepolia chainId / RPC / addEthereumChain 参数）
-      ├─ errors.js                EIP-1193 错误码 → 中文 + isSepolia 容忍 4 种 chainId 类型
-      └─ format.js                地址缩略 / 浏览器链接
+   ├─ main.jsx                    挂载 + 引入 @wallet 样式与本地 demo.css
+   ├─ App.jsx                     演示页：组装组件 + 打印原始状态
+   └─ styles/demo.css             只剩本页用到的 .kv（状态表）与 .notes
 ```
 
-**核心只有 3 个文件**：`hooks/useWallet.js`（逻辑）、`components/ConnectWalletButton.jsx` + `NetworkBadge.jsx`（UI）。
-其余都是给它们打下手。`App.jsx` 里的状态表格是为了方便你观察状态机，不是模块的一部分。
+就这些。钱包层（`useWallet` / `WalletContext` / 两个组件 / `chain` / `errors` / `format` / `wallet.css`）
+**全部在 `../shared/wallet/src/`**，本目录一行都没有 —— 这是重构后的设计，避免两份实现漂移。
 
 ---
 
-## `useWallet()` 的接口
+## `useWalletContext()` 的接口
+
+与 `useWallet()` 返回同一个结构，详见 [`../shared/wallet/README.md`](../shared/wallet/README.md)。
 
 ```js
 const {
   status,        // loading | noMetaMask | disconnected | connecting | connected | wrongNetwork
-  account,       // "0x…"（小写），来自 eth_accounts / eth_requestAccounts
+  account,       // "0x…"，来自 eth_accounts / eth_requestAccounts
   chainId,       // "0xaa36a7" 这样的十六进制字符串，来自 eth_chainId
   provider,      // ethers.BrowserProvider（包装 window.ethereum）
-  signer,        // ethers.JsonRpcSigner —— 只用于签名，本模块不用
-  error,         // 面向用户的中文错误文案
+  signer,        // ethers.JsonRpcSigner —— 业务层拿它去发交易，本壳不用
+  error,         // 最近一次失败原因（原始 message）
   connect,       // 点「连接钱包」→ eth_requestAccounts（弹窗）
   disconnect,    // 点「断开」→ wallet_revokePermissions（撤销本站授权）
   ensureSepolia, // 静默读链 → 不是 Sepolia 就 switch（4902 时先 add）→ 轮询复核
   isConnected,   // status === "connected"
   isWrongNetwork // status === "wrongNetwork"
-} = useWallet();
+} = useWalletContext();
 ```
 
 状态机：
@@ -101,40 +117,8 @@ loading ──┬─→ noMetaMask                       页面里没有 window.
 | `wallet_addEthereumChain` | 上面的报 4902（钱包里没这条链）时补一次 | **弹** |
 | `wallet_revokePermissions` | 点「断开」 | 不弹（部分钱包不支持，已 try/catch 吞掉） |
 
-事件：`accountsChanged`（换账号 / 钱包锁定）、`chainChanged`（换网络）。
-两个监听器在 mount-only effect 里注册、卸载时 removeListener —— **依赖数组必须是 `[]` 类**，
-否则每次渲染都会重复解绑/绑定（很多教程示例就漏了这点）。
-
----
-
-## 移植到你自己的项目
-
-只需要 4 步：
-
-1. 复制 `src/hooks/useWallet.js`、`src/lib/chain.js`、`src/lib/errors.js`、`src/lib/format.js`
-   （如果不用 Context，`context/WalletContext.jsx` 也可以一起拿走）。
-2. 复制 `src/components/ConnectWalletButton.jsx` + `NetworkBadge.jsx`。
-3. 把 `wallet.css` 里 `:root` 的 token 和你自己的主题合并（或直接整段贴进去）。
-4. 装依赖：`ethers@^6`、`react@^18`。
-
-改链（比如换成主网 / Linea / 自建链）只改 `lib/chain.js` 四个常量，其它文件不用动。
-
-**要接业务时**，不要在 `useWallet.js` 里加合约代码 —— 在它上面再包一层
-（大项目里就是 `useContract.js` + `useEvents.js`），把 `provider` / `signer` 往下传。
-这样钱包层永远不认识任何合约，换项目可以直接搬。
-
----
-
-## 几个容易被问到的点
-
-- **为什么刷新页面不会重新弹窗？** 因为钱包那边「站点授权」还在，`eth_accounts` 直接返回地址。
-  这不是前端做的持久化，前端没有任何 token/localStorage 登录态。
-- **每次交易都要重新「连接钱包」吗？** 不用。连接（授权站点）一个来源只做一次；
-  每笔**写操作**需要的是**当次签名确认**（钱包弹窗点确认），那是签名，不是连接。
-- **`signer` 是干嘛的？** 它是 ethers 对「能签名的账户」的包装，`signer.sendTransaction()` 时
-  钱包会弹确认。本模块拿到它但不使用 —— 这是给上层业务留的接口。
-- **能不能不做网络检查？** 可以，但写操作会打到错误的链上。`ensureSepolia()` 在连接成功后自动跑一次，
-  失败就把状态压成 `wrongNetwork`，由 `NetworkBadge` 给出「一键盘切换」。
+事件：`accountsChanged`、`chainChanged`。两个监听器在 mount-only effect 里注册、卸载时 `removeListener`
+—— **依赖数组必须是 `[]` 类**，否则每次渲染都会重复解绑 / 绑定（很多教程示例就漏了这点）。
 
 ---
 
@@ -142,15 +126,9 @@ loading ──┬─→ noMetaMask                       页面里没有 window.
 
 | | 路径 | 说明 |
 |---|---|---|
-| 大项目 | `../frontend` | 完整门票 DApp（钱包 + 合约 + 活动面板） |
-| 本模块 | `.` | 只有钱包层。钱包层代码与大项目是**同一份**（逻辑零改动），区别是 import 路径、文件头注释，以及剔除了 ABI 与业务错误表 |
+| 共享钱包模块 | `../shared/wallet/` | **钱包层的唯一真源**（`useWallet` / Context / 两个组件 / `chain` / `errors` / `format` / `wallet.css`） |
+| 本目录 | `.` | 只是它的一层演示壳：`App.jsx` + `main.jsx` + `demo.css` |
+| 门票业务 | `../frontend/` | 另一个消费者：在同一个钱包接口之上实现铸造 / 领取 |
 
-改动本模块时如果想同步回大项目，只需要把 `lib/contract` ↔ `lib/chain` 的 import 换回来即可。
-反过来也一样：**改了 `frontend/src/hooks/useWallet.js`，请在同一次提交里同步这一份**。
-
-`diff` 出来会是 **7 行**（1 行 import + 5 行本模块特有的文件头注释 + 1 行空注释），这是预期的；
-**出现其它差异才说明两份漂移了**。
-
-```bash
-diff frontend/src/hooks/useWallet.js wallet-login/src/hooks/useWallet.js
-```
+**`shared/wallet/` 里改代码，两个项目同时生效**，不存在「同步这一份 / 换回 import」这种事了。
+改完记得两边都 `npm run build` 一遍（CI 也是分开跑两个 build）。

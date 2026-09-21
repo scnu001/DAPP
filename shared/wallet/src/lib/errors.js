@@ -1,8 +1,14 @@
 /**
- * errors.js —— 钱包层错误处理（从门票 DApp 的 lib/errors.js 抽出）
+ * errors.js —— 钱包 / 网络层错误处理。
  *
- * 原文件里的 REVERT_MAP（把 `Ticket: already claimed` 翻成中文）属于业务，已剔除；
- * 这里只留「钱包/网络」相关的部分。
+ * 这里只认识 EIP-1193 与 EIP-3326 的标准错误码，**不认识任何合约 revert**。
+ * 合约 revert 的解析（require 文案 → 中文）属于业务层，
+ * 放在 `frontend/src/lib/errors.js`（decodeRevert / friendlyMessage）。
+ *
+ * 两层的分工：
+ *   钱包层  friendlyWalletError(err)  ← 用户拒绝、钱包未授权、链不存在…
+ *   业务层  decodeRevert(err, iface)  ← 合约 require / 自定义 error
+ * 业务层可以把自己解析出的 reason 再交给 friendlyWalletError 兜底。
  */
 import { SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_DEC } from "./chain";
 
@@ -39,17 +45,24 @@ export function isSepolia(chainId) {
   return raw === SEPOLIA_CHAIN_ID.toLowerCase() || Number(raw) === SEPOLIA_CHAIN_ID_DEC;
 }
 
-/** 从任意错误对象里认出 EIP-1193 错误码 */
+/** 从任意错误对象里认出 EIP-1193 错误码（不同钱包把 code 藏在不同层级） */
 export function codeOf(err) {
   const c = err?.code ?? err?.error?.code ?? err?.info?.error?.code;
   return typeof c === "number" ? c : Number.isFinite(Number(c)) ? Number(c) : null;
+}
+
+/** 这次失败是不是「用户在钱包里点了拒绝」 */
+export function isUserRejection(err) {
+  if (codeOf(err) === 4001) return true;
+  const text = String(err?.message ?? err ?? "").toLowerCase();
+  return USER_REJECT_HINTS.some((needle) => text.includes(needle.toLowerCase()));
 }
 
 /**
  * 把钱包抛出的错误翻成能给用户看的中文。
  * 顺序：错误码 → 用户拒绝文案 → Ethers 的 shortMessage → 原始 message
  */
-export function friendlyMessage(err) {
+export function friendlyWalletError(err) {
   if (!err) return "未知错误";
 
   const code = codeOf(err);
@@ -65,5 +78,3 @@ export function friendlyMessage(err) {
   if (err?.info?.error?.message) return String(err.info.error.message);
   return text.length > 160 ? `${text.slice(0, 160)}…` : text;
 }
-
-/* 展示类助手（shortAddress / explorerAddress）放在 lib/format.js，保持与原项目一致的分工 */

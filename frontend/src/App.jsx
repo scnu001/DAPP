@@ -1,9 +1,14 @@
 import { useState } from "react";
-import { WalletProvider, useWalletContext } from "./context/WalletContext";
+// 钱包层全部来自共享模块（单一真源）—— 连接、账号、链、signer 都从 @wallet 拿。
+// 本文件以下的部分才是业务：把 signer 变成 TicketNFT 合约调用，做铸造与领取。
+import {
+  WalletProvider,
+  useWalletContext,
+  ConnectWalletButton,
+  NetworkBadge,
+} from "@wallet";
 import { useContract } from "./hooks/useContract";
 import { useEvents } from "./hooks/useEvents";
-import ConnectWalletButton from "./components/ConnectWalletButton";
-import NetworkBadge from "./components/NetworkBadge";
 import OrganizerPanel from "./components/OrganizerPanel";
 import AttendeePanel from "./components/AttendeePanel";
 import EventCard from "./components/EventCard";
@@ -13,6 +18,7 @@ import { explorerContract, shortAddress } from "./lib/format";
 
 function Dapp() {
   const wallet = useWalletContext();
+  // 钱包接口 → 合约实例：readContract 用公共 RPC 兜底，writeContract 需要 signer
   const { readContract, writeContract } = useContract(wallet);
   const ticket = useEvents({ wallet, readContract, writeContract });
 
@@ -121,8 +127,8 @@ function Dapp() {
 
       <footer className="app-footer">
         <span className="muted small">
-          COMP7610 Final Project · React 18 + Vite · Ethers v6 · Solidity ^0.8.20 + OpenZeppelin v5 ·
-          Sepolia
+          钱包层来自共享模块 <code>@wallet</code> · 业务层 React 18 + Vite · Ethers v6 · Solidity
+          ^0.8.20 + OpenZeppelin v5 · Sepolia
         </span>
       </footer>
     </div>

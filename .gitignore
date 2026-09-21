@@ -31,6 +31,10 @@ typechain-types/
 .vite/
 *.tsbuildinfo
 
+# Vite 每次加载 vite.config.js 会写一个临时文件，正常会自动删；进程被强杀时会残留
+vite.config.js.timestamp-*.mjs
+**/vite.config.js.timestamp-*.mjs
+
 # ============================================================
 #  Hardhat 本地链部署产物（只对本地有意义；sepolia.json 要保留入库）
 # ============================================================

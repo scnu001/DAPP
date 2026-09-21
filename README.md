@@ -24,7 +24,6 @@
 ## 一、项目文件说明
 
 ### 1.1 目录总览
-
 ```
 comp7610-ticket-dapp/
 ├─ contracts/
@@ -39,52 +38,55 @@ comp7610-ticket-dapp/
 │  └─ export-remix.js                 导出可粘进 Remix 的合约源码
 ├─ deployments/
 │  └─ sepolia.json                    部署产物：地址 + ABI
-├─ frontend/                          完整门票 DApp 前端
+├─ shared/
+│  └─ wallet/                         ★ 共享钱包模块（全项目唯一真源）
+│     ├─ README.md                    模块接口、状态机、移植步骤
+│     └─ src/
+│        ├─ index.js                  ★ 唯一公开入口；外面只从这里 import
+│        ├─ hooks/useWallet.js        钱包状态机（唯一读写 window.ethereum）
+│        ├─ context/WalletContext.jsx WalletProvider / useWalletContext
+│        ├─ components/
+│        │  ├─ ConnectWalletButton.jsx 连接 / 断开按钮（纯展示）
+│        │  └─ NetworkBadge.jsx        网络徽章 + 切换 Sepolia（纯展示）
+│        ├─ lib/
+│        │  ├─ chain.js                链常量（无 ABI、无合约地址）
+│        │  ├─ errors.js               EIP-1193 错误码 / isSepolia / 中文提示
+│        │  └─ format.js               地址缩略 / 浏览器地址页
+│        └─ styles/wallet.css          设计 token + 骨架 + 按钮 + 徽章 + 横幅
+├─ frontend/                          门票业务前端（消费 @wallet）
 │  ├─ index.html
-│  ├─ vite.config.js
+│  ├─ vite.config.js                  含 @wallet 别名 → ../shared/wallet/src
 │  ├─ package.json / package-lock.json
-│  ├─ .env.example
+│  ├─ .env.example                    VITE_CONTRACT_ADDRESS
 │  ├─ 启动本地服务.cmd                Windows 双击即起 dev server
 │  └─ src/
 │     ├─ main.jsx                     入口：挂载 React
 │     ├─ App.jsx                      组装页面 + 角色门禁
-│     ├─ styles/index.css
-│     ├─ context/WalletContext.jsx
+│     ├─ styles/index.css             @import "@wallet/styles/wallet.css" + 业务样式
 │     ├─ hooks/
-│     │  ├─ useWallet.js              钱包层（唯一碰 window.ethereum）
-│     │  ├─ useContract.js            只读 Provider 与 Signer 分离
-│     │  └─ useEvents.js              活动数据 + 写操作状态机
+│     │  ├─ useContract.js            ★ 钱包接口 → 合约实例（signer → Contract）
+│     │  └─ useEvents.js              活动数据 + 写操作状态机（铸造 / 领取 / 闭场）
 │     ├─ lib/
-│     │  ├─ contract.js               链常量 + Human-readable ABI
-│     │  ├─ errors.js                 revert 解码与中文提示
+│     │  ├─ contract.js               合约地址 + Human-readable ABI
+│     │  ├─ errors.js                 revert 解码与中文提示（业务层）
 │     │  ├─ events.js                 receipt 日志解析
-│     │  └─ format.js                 地址缩略 / 浏览器链接 / 时间格式化
+│     │  └─ format.js                 业务格式化（交易 / NFT / 合约链接、时间互转）
 │     └─ components/
-│        ├─ ConnectWalletButton.jsx   连接 / 断开按钮（纯展示）
-│        ├─ NetworkBadge.jsx          网络徽章 + 切换 Sepolia（纯展示）
 │        ├─ EventCard.jsx             单场活动卡片
 │        ├─ OrganizerPanel.jsx        主办方：开票表单
-│        ├─ AttendeePanel.jsx         参与者：领票 + 我的门票
+│        ├─ AttendeePanel.jsx         参与者：我的门票
 │        └─ TxStatus.jsx              交易状态反馈
-├─ wallet-login/                      钱包登录层单独抽出的可独立运行项目
+├─ wallet-login/                      @wallet 的演示壳（不含任何钱包实现）
 │  ├─ index.html
-│  ├─ vite.config.js
+│  ├─ vite.config.js                  含 @wallet 别名
 │  ├─ package.json / package-lock.json
 │  ├─ .env.example / .gitignore
-│  ├─ README.md                       该模块的独立说明
+│  ├─ README.md                       该演示壳的独立说明
+│  ├─ e2e/run-wallet-login.mjs        转调父仓库的真钱包脚本
 │  └─ src/
-│     ├─ main.jsx
-│     ├─ App.jsx                      演示页 + 状态表格
-│     ├─ styles/wallet.css
-│     ├─ context/WalletContext.jsx
-│     ├─ hooks/useWallet.js           照搬 frontend 那份（逻辑零改动，另加文件头注释）
-│     ├─ lib/
-│     │  ├─ chain.js                  链常量（无 ABI、无合约地址）
-│     │  ├─ errors.js                 EIP-1193 错误码 + isSepolia
-│     │  └─ format.js                 地址缩略 / 浏览器链接
-│     └─ components/
-│        ├─ ConnectWalletButton.jsx
-│        └─ NetworkBadge.jsx
+│     ├─ main.jsx                     引入 @wallet 样式 + 演示样式
+│     ├─ App.jsx                      演示页：组装组件 + 打印原始状态
+│     └─ styles/demo.css              仅本页用到的 .kv / .notes
 ├─ hardhat.config.js
 ├─ package.json / package-lock.json
 ├─ .env.example
@@ -120,35 +122,61 @@ comp7610-ticket-dapp/
 | 文件 | 说明 |
 | --- | --- |
 | `src/main.jsx` | 入口，挂载 React 并引入全局样式。 |
-| `src/App.jsx` | 组装页面；按链上 `owner()` 推导角色（主办方 / 参与者），`canWrite` 在合约未配置或网络不对时禁用写操作。 |
-| `src/context/WalletContext.jsx` | 把 `useWallet()` 的状态挂到 Context，避免逐层透传。 |
-| `src/hooks/useWallet.js` | **钱包层**，唯一读写 `window.ethereum` 的文件。连接 / 静默恢复 / 切链 / 事件监听全在这里，不认识任何合约。 |
-| `src/hooks/useContract.js` | 只读 `Contract`（公共 RPC 兜底）与可写 `Contract`（绑定 `signer`）的分离点。 |
-| `src/hooks/useEvents.js` | 活动列表 + 我的门票 + 四类写操作，统一走 `runTx` 状态机。 |
-| `src/lib/contract.js` | 链常量、`SEPOLIA_NETWORK_PARAMS`、Human-readable `TICKET_ABI`。 |
-| `src/lib/errors.js` | 从 Ethers v6 各种错误形态里挖出 revert 原因，并翻译成中文。 |
+| `src/App.jsx` | 组装页面。钱包层全部来自 `@wallet`（`WalletProvider` / `useWalletContext` / 两个组件）；按链上 `owner()` 推导角色，`canWrite` 在合约未配置、网络不对或无 signer 时禁用写操作。 |
+| `src/styles/index.css` | 第一行 `@import "@wallet/styles/wallet.css";` 复用钱包模块的设计 token 与视觉基元，之后只写门票业务自己的样式（表单 / 卡片 / 标签 / 我的门票 / 交易状态）。 |
+| `src/hooks/useContract.js` | **「业务建在钱包接口之上」的范例**：拿 `wallet.provider` / `wallet.signer` 建 `Contract`。只读实例有公共 RPC 兜底，所以不连钱包也能浏览活动列表。 |
+| `src/hooks/useEvents.js` | 活动列表 + 我的门票 + 四类写操作，统一走 `runTx` 状态机；写操作前先 `wallet.ensureSepolia()`。 |
+| `src/lib/contract.js` | **只有**合约地址与 `TICKET_ABI`（链常量已上移到 `@wallet`）。 |
+| `src/lib/errors.js` | 业务层错误：从 Ethers v6 各种错误形态里挖出 revert 原因，并翻译成中文。 |
 | `src/lib/events.js` | 解析交易回执日志（交易函数的返回值只能从事件里拿）。 |
-| `src/lib/format.js` | 地址缩略、Etherscan 链接、`uint64` 秒 ↔ `datetime-local` 互转。 |
-| `src/components/*.jsx` | 6 个纯展示组件：钱包按钮、网络徽章、活动卡片、主办方面板、参与者面板、交易状态。 |
+| `src/lib/format.js` | 业务格式化（交易 / NFT / 合约链接、时间互转）；`shortAddress` / `explorerAddress` 从 `@wallet` re-export，不再各写一份。 |
+| `src/components/*.jsx` | 4 个纯展示业务组件：活动卡片、主办方面板、参与者面板、交易状态。（钱包按钮与网络徽章已移入 `@wallet`。） |
 | `启动本地服务.cmd` | Windows 双击即 `npm run dev`；缺 `node_modules` 会先 `npm install`。 |
 
-### 1.5 钱包登录模块 `wallet-login/`
+### 1.5 共享钱包模块 `shared/wallet/` ★
 
-从大前端里**只抽出「连接钱包」这一层**的独立 Vite 项目：不含 ABI、不发交易、不调后端、不产生 token。
+全项目**唯一**的钱包实现。它只做一件事：连接状态、账号、链、`signer`，以及自动切到 Sepolia。
+它不认识任何合约 —— 没有 ABI、没有合约地址、没有后端调用（搜 `claim` / `createEvent` / `TicketNFT` 都搜不到）。
 
 | 文件 | 说明 |
 | --- | --- |
-| `src/hooks/useWallet.js` | 与 `frontend/src/hooks/useWallet.js` 是**同一份代码**：逻辑零改动，只差 import 路径（`../lib/contract` ↔ `../lib/chain`）与文件头多出的一段注释。 |
-| `src/lib/chain.js` | 链常量。相比 `frontend/src/lib/contract.js`，**已剔除** `TICKET_ABI` 与 `CONTRACT_ADDRESS`。 |
-| `src/lib/errors.js` | 已剔除业务 `REVERT_MAP`，只保留 EIP-1193 错误码与 `isSepolia`。 |
-| `src/lib/format.js` | 只保留 `shortAddress` / `explorerAddress`。 |
-| `src/components/` | 只有 `ConnectWalletButton` 与 `NetworkBadge`。 |
-| `src/App.jsx` | 演示页：组装组件 + 打印 `useWallet()` 的原始状态，便于观察状态机。 |
-| `README.md` | 该模块的接口表、EIP-1193 方法表、移植步骤。 |
+| `src/index.js` | **唯一公开入口**。消费方只允许 `import { … } from "@wallet"`，不要写 `@wallet/hooks/useWallet` 这类深层路径 —— 那是内部实现，随时可能改。公开接口共 5 组：React 装配、现成组件、钱包状态对象、链常量、无状态助手。 |
+| `src/hooks/useWallet.js` | 钱包状态机，**唯一读写 `window.ethereum` 的文件**。连接 / 静默恢复 / 切链 / 事件监听全在这里。 |
+| `src/context/WalletContext.jsx` | `WalletProvider` + `useWalletContext()`，避免 props 层层透传。 |
+| `src/components/ConnectWalletButton.jsx` | 「连接钱包 / 断开」按钮，纯展示，只吃一个 `wallet` prop。 |
+| `src/components/NetworkBadge.jsx` | 网络徽章 + 「切换到 Sepolia」，纯展示。 |
+| `src/lib/chain.js` | 链常量。**想换链只改这一个文件**（4 个常量）。 |
+| `src/lib/errors.js` | EIP-1193 错误码表、`isSepolia`、`isUserRejection`、`friendlyWalletError`。**不含合约 revert**（那是业务层 `frontend/src/lib/errors.js` 的事）。 |
+| `src/lib/format.js` | `shortAddress` / `explorerAddress`（只拼 URL，不发请求）。 |
+| `src/styles/wallet.css` | 设计 token（`:root`）、reset、页面骨架、按钮、地址框、网络徽章、横幅。两个项目共用同一份，视觉天然一致。 |
+| `README.md` | 接口表、状态机图、EIP-1193 方法表、**移植到其它项目的步骤**。 |
+
+**怎么被引用**：两个 Vite 项目各在 `vite.config.js` 里配一条别名 ——
+
+```js
+resolve: { alias: { "@wallet": fileURLToPath(new URL("../shared/wallet/src", import.meta.url)) } }
+```
+
+于是 `frontend/` 与 `wallet-login/` 引用的是**同一份文件**，改一处两边同时生效，不再有「两份拷贝会不会漂移」的问题。
+（用 `fileURLToPath` 而不是 `new URL().pathname`：中文路径下 `pathname` 会带 `%E4%BD%9C` 这类编码。）
+
+### 1.6 演示壳 `wallet-login/`
+
+`@wallet` 的**演示壳**：这里没有任何钱包实现代码，只有一个页面骨架 + 状态表格。
+它的价值是回答「一个页面要怎么装配这个钱包模块」，并作为钱包层改动的快速回归入口。
+
+| 文件 | 说明 |
+| --- | --- |
+| `src/App.jsx` | 演示页：包一层 `<WalletProvider>`，用 `useWalletContext()` 取状态，放 `NetworkBadge` + `ConnectWalletButton`，再把原始状态打成表格。 |
+| `src/main.jsx` | 引入 `@wallet/styles/wallet.css` 与本地 `demo.css`，挂载 React。 |
+| `src/styles/demo.css` | 只剩演示页自己的 `.kv`（状态表格）与 `.notes`（说明列表）。 |
+| `vite.config.js` | 含 `@wallet` 别名。 |
+| `README.md` | 该演示壳的说明 + 稳定文案/class 锚点清单。 |
+| `e2e/run-wallet-login.mjs` | 跑真钱包 E2E；**转调**父仓库的 `e2e/wallet-login.mjs`，不复制代码。 |
 
 > ⚠️ `wallet-login/` 与 `frontend/` **都监听 5173**，不能同时启动。跑 `wallet-login` 之前先停掉 `frontend` 的 dev server。
 
-### 1.6 工程与协作配置
+### 1.7 工程与协作配置
 
 | 文件 | 说明 |
 | --- | --- |
@@ -290,26 +318,50 @@ event EventURIUpdated(uint256 indexed eventId, string baseURI);
 
 ---
 
-### 2.2 前端模块接口 `frontend/src/`
+### 2.2 共享钱包模块接口 `@wallet`
 
-前端不对外暴露 HTTP 接口，接口即下面这几个 hook 与 lib 模块的导出。
+对外接口就是 `shared/wallet/src/index.js` 里 export 的东西。**只从这个入口 import**。
 
-#### 2.2.1 `useWallet()` — `src/hooks/useWallet.js`
+```js
+import {
+  // A. React 装配
+  WalletProvider, useWalletContext, useWallet,
+  // B. 现成组件（都只吃一个 wallet prop）
+  ConnectWalletButton, NetworkBadge,
+  // D. 链常量
+  SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_DEC, SEPOLIA_RPC_URL,
+  SEPOLIA_EXPLORER_URL, SEPOLIA_NETWORK_PARAMS,
+  // E. 无状态助手
+  isSepolia, isUserRejection, friendlyWalletError, codeOf,
+  shortAddress, explorerAddress,
+} from "@wallet";
+```
+
+样式在项目自己的 CSS 顶部引入：
+
+```css
+@import "@wallet/styles/wallet.css";
+```
+
+#### 2.2.1 `useWallet()` / `useWalletContext()` 的返回值
+
+两者返回**同一个结构**。区别只是 `useWallet()` 每次调用都新建一份状态（需要多实例时用），
+`useWalletContext()` 取的是根部 `<WalletProvider>` 注入的那一份（常规用法）。
 
 ```js
 const {
   status,          // "loading" | "noMetaMask" | "disconnected" | "connecting" | "connected" | "wrongNetwork"
-  account,         // "0x…"（小写）；未连接为 ""
+  account,         // "0x…"；未连接为 ""
   chainId,         // 十六进制字符串，如 "0xaa36a7"
   provider,        // ethers.BrowserProvider | null
-  signer,          // ethers.JsonRpcSigner | null（只用于签名）
-  error,           // 面向用户的中文错误文案；无错误为 ""
+  signer,          // ethers.JsonRpcSigner | null   ← 业务层拿它 new Contract(...) 发交易
+  error,           // 原始失败 message；无错误为 ""
   connect,         // () => Promise<void>   点「连接钱包」→ eth_requestAccounts（弹窗）
   disconnect,      // () => Promise<void>   点「断开」→ wallet_revokePermissions（静默）
   ensureSepolia,   // () => Promise<void>   幂等：不是 Sepolia 就切（4902 时先 add）→ 轮询复核
   isConnected,     // status === "connected"
   isWrongNetwork,  // status === "wrongNetwork"
-} = useWallet();
+} = useWalletContext();
 ```
 
 **状态机**：
@@ -321,11 +373,73 @@ loading ──┬─→ noMetaMask                        页面里没有 window
                     └────── disconnect ──────┘
 ```
 
-**约定**：`window.ethereum` **只允许出现在这个文件里**。接业务不要在 `useWallet.js` 里加合约代码，要在它上层再包一层（本项目的 `useContract` + `useEvents`），把 `provider` / `signer` 往下传。
+**约定**：`window.ethereum` **只允许出现在 `shared/wallet/src/hooks/useWallet.js` 里**。
+接业务**不要**往这个文件里加合约代码，要在它上层再包一层（本项目的 `useContract` + `useEvents`），
+把 `provider` / `signer` 往下传 —— 这样「换合约」不动钱包模块，「换钱包」不动合约代码。
 
-**事件监听**：`accountsChanged`（换账号 / 钱包锁定）与 `chainChanged`（换网络）在 **mount-only effect** 里注册、卸载时 `removeListener`，依赖数组必须是 `[]` 类 —— 否则每次渲染都会重复解绑/绑定。换账号会作废旧 signer 并清空上一账号的业务状态。
+**事件监听**：`accountsChanged`（换账号 / 钱包锁定）与 `chainChanged`（换网络）在 **mount-only effect** 里注册、
+卸载时 `removeListener`，依赖数组必须是 `[]` 类 —— 否则每次渲染都会重复解绑/绑定。换账号会作废旧 signer。
 
-#### 2.2.2 `useContract(wallet)` — `src/hooks/useContract.js`
+#### 2.2.2 `<WalletProvider>` 与现成组件
+
+| 导出 | Props | 说明 |
+| --- | --- | --- |
+| `WalletProvider` | `{ children }` | 在页面根部包一层，把 `useWallet()` 的状态注入 Context。一个页面只需要包一次。 |
+| `useWalletContext()` | — | 取 Context 里的钱包对象；不在 Provider 内会抛错（尽早暴露装配错误）。 |
+| `ConnectWalletButton` | `{ wallet }` | 按 `status` 渲染「连接钱包 / 断开」或「安装 MetaMask」。锚点：`.account-addr` / `.inline-error`。 |
+| `NetworkBadge` | `{ wallet }` | 显示当前网络；非 Sepolia 时给「切换到 Sepolia (0xaa36a7)」按钮。锚点：`.network-badge(.ok/.bad)`。 |
+
+#### 2.2.3 链常量与无状态助手
+
+| 导出 | 签名 / 值 | 说明 |
+| --- | --- | --- |
+| `SEPOLIA_CHAIN_ID` | `"0xaa36a7"` | EIP-3326 要求的十六进制形式。 |
+| `SEPOLIA_CHAIN_ID_DEC` | `11155111` | 十进制，用于展示与比较。 |
+| `SEPOLIA_RPC_URL` | `string` | 公共只读 RPC，默认 `https://ethereum-sepolia-rpc.publicnode.com`，可用 `VITE_SEPOLIA_RPC_URL` 覆盖。 |
+| `SEPOLIA_EXPLORER_URL` | `"https://sepolia.etherscan.io"` | 浏览器基地址。 |
+| `SEPOLIA_NETWORK_PARAMS` | `object` | `wallet_addEthereumChain` 的参数，处理 4902 时用。 |
+| `isSepolia` | `(chainId) => boolean` | 容忍 `string` / `number` / `bigint` 三种类型与大小写。 |
+| `isUserRejection` | `(err) => boolean` | 这次失败是不是「用户在钱包里点了拒绝」（code 4001 或文案命中）。 |
+| `codeOf` | `(err) => number \| null` | 从 `err.code` / `err.error.code` / `err.info.error.code` 里挖出 EIP-1193 错误码。 |
+| `friendlyWalletError` | `(err) => string` | 翻译顺序：错误码 → 用户拒绝文案 → Ethers `shortMessage` → 原始 `message`（超 160 字符截断）。**不含合约 revert。** |
+| `shortAddress` | `(addr) => string` | `0x1234…abcd`。 |
+| `explorerAddress` | `(addr) => string` | Etherscan 地址页链接。 |
+
+内置的 EIP-1193 错误码表：
+
+| 错误码 | 含义 |
+| --- | --- |
+| `4001` | 你在钱包里取消了这次操作 |
+| `4100` | 钱包未授权（需要先连接钱包） |
+| `4200` | 钱包不支持该方法 |
+| `4900` | 钱包与节点断开连接 |
+| `4901` | 钱包未连接到该网络 |
+| `4902` | 钱包里还没有 Sepolia 这个网络（需先添加）→ 触发 `wallet_addEthereumChain` |
+
+**用到的 EIP-1193 方法**：
+
+| 方法 | 何时调用 | 弹不弹窗 |
+| --- | --- | --- |
+| `eth_accounts` | 挂载时静默恢复上次授权 | 不弹 |
+| `eth_requestAccounts` | 点「连接钱包」 | **弹** |
+| `eth_chainId` | 每次判断网络前静默读一次 | 不弹 |
+| `wallet_switchEthereumChain` | 网络不对时切到 Sepolia | **弹** |
+| `wallet_addEthereumChain` | 上一步报 4902（钱包里没这条链）时补一次 | **弹** |
+| `wallet_revokePermissions` | 点「断开」 | 不弹（部分钱包不支持，已 try/catch 吞掉） |
+
+监听事件：`accountsChanged`（换账号 / 钱包锁定）、`chainChanged`（换网络）。
+
+> ⚠️ 注意：**连接钱包 ≠ 登录**。这里没有 session、没有 token。一个来源只「连接」一次；
+> 之后每笔**写操作**要的是**当次签名确认**，不是重新连接。
+
+---
+
+### 2.3 门票业务前端接口 `frontend/src/`
+
+**这才是「在钱包接口之上实现 NFT 铸造与领取」的地方。**
+业务层不碰 `window.ethereum`，只消费 2.2 的接口。
+
+#### 2.3.1 `useContract(wallet)` — `src/hooks/useContract.js`
 
 ```js
 const { readProvider, readContract, writeContract, contractReady } = useContract(wallet);
@@ -335,10 +449,10 @@ const { readProvider, readContract, writeContract, contractReady } = useContract
 | --- | --- | --- |
 | `readProvider` | `BrowserProvider \| JsonRpcProvider` | 已连钱包时用钱包的 provider，否则回落到公共 RPC —— 所以**没连钱包也能浏览活动列表**。 |
 | `readContract` | `Contract \| null` | 只读合约实例；`CONTRACT_ADDRESS` 为空时为 `null`。 |
-| `writeContract` | `Contract \| null` | 绑定 `signer` 的合约实例；未连接或地址未配置时为 `null`，UI 据此禁用写按钮。 |
+| `writeContract` | `Contract \| null` | 绑定 `wallet.signer` 的合约实例；未连接或地址未配置时为 `null`，UI 据此禁用写按钮。 |
 | `contractReady` | `boolean` | 等价于 `Boolean(readContract)`。 |
 
-#### 2.2.3 `useEvents({ wallet, readContract, writeContract })` — `src/hooks/useEvents.js`
+#### 2.3.2 `useEvents({ wallet, readContract, writeContract })` — `src/hooks/useEvents.js`
 
 ```js
 const {
@@ -351,7 +465,7 @@ const {
   loadError,       // string        只读加载失败原因
   refresh,         // () => Promise<void>              重新拉取活动列表与我的门票
   createEvent,     // (form) => Promise<bigint | null>  返回新 eventId
-  claim,           // (eventId) => Promise<{ tokenId, eventId } | null>
+  claim,           // (eventId) => Promise<{ tokenId, eventId } | null>  领取门票
   closeEvent,      // (eventId) => Promise<void>
   updateEventURI,  // (eventId, baseURI) => Promise<void>
   setTx,           // 手动重置 / 干预交易状态
@@ -390,21 +504,20 @@ const {
 { name: string, baseURI: string, startAt: number, endAt: number, maxSupply: number }
 ```
 
-写操作统一走内部的 `runTx`：先 `ensureSepolia()`（幂等）→ `send()` → `setTx("pending", hash)` → `response.wait(1)` → 校验 `receipt.status === 1` → `refresh()`。任何一步失败都会用 `decodeRevert()` 解析原因写入 `tx.reason`，然后原样抛出。
+写操作统一走内部的 `runTx`：先 `wallet.ensureSepolia()`（幂等，这一步用的是**钱包接口**）→ `send()` →
+`setTx("pending", hash)` → `response.wait(1)` → 校验 `receipt.status === 1` → `refresh()`。
+任何一步失败都会用 `decodeRevert()` 解析原因写入 `tx.reason`，然后原样抛出。
 
-#### 2.2.4 `src/lib/contract.js` — 链常量与 ABI
+#### 2.3.3 `src/lib/contract.js` — 合约地址与 ABI
 
 | 导出 | 类型 | 说明 |
 | --- | --- | --- |
-| `SEPOLIA_CHAIN_ID` | `string` | `"0xaa36a7"`，EIP-3326 要求的十六进制形式。 |
-| `SEPOLIA_CHAIN_ID_DEC` | `number` | `11155111`，用于展示与比较。 |
-| `SEPOLIA_RPC_URL` | `string` | 公共只读 RPC，默认 `https://ethereum-sepolia-rpc.publicnode.com`，可用 `VITE_SEPOLIA_RPC_URL` 覆盖。 |
-| `SEPOLIA_EXPLORER_URL` | `string` | `https://sepolia.etherscan.io`。 |
 | `CONTRACT_ADDRESS` | `string` | 从 `VITE_CONTRACT_ADDRESS` 读取；未配置为空串（此时 `readContract` 为 `null`）。 |
-| `SEPOLIA_NETWORK_PARAMS` | `object` | `wallet_addEthereumChain` 的参数，处理 4902 时用。 |
 | `TICKET_ABI` | `string[]` | Human-readable ABI（Ethers v6 支持）。与 2.1 的接口一一对应，**改动合约必须同步此数组**。 |
 
-#### 2.2.5 `src/lib/events.js` — 回执日志解析
+> 链常量（chainId / RPC / 浏览器 / 加链参数）**不在这个文件里**，统一从 `@wallet` 引入。
+
+#### 2.3.4 `src/lib/events.js` — 回执日志解析
 
 | 导出 | 签名 | 说明 |
 | --- | --- | --- |
@@ -414,21 +527,20 @@ const {
 | `claimFromReceipt` | `(contract, receipt) => { eventId, attendee, tokenId } \| null` | 取 `claim` 回执里的 tokenId。 |
 | `fetchClaimers` | `async (contract, eventId, fromBlock = 0) => Claimer[]` | 用 `queryFilter` 拉某场活动的历史领取名单。公共 RPC 对区块区间有限制，活动量大时建议按部署区块分段查。 |
 
-#### 2.2.6 `src/lib/errors.js` — 错误解码
+#### 2.3.5 `src/lib/errors.js` — 错误解码（业务层）
 
 | 导出 | 签名 | 说明 |
 | --- | --- | --- |
 | `extractRevertData` | `(err) => string \| null` | 挖出原始 revert data。Ethers v6 在不同 provider 下 `err.data` 类型不同（MetaMask 是 hex 字符串，Hardhat 是对象），所以 `err.data` / `err.error.data` / `err.info.error.data` / `err.revert.data` 四处都试。 |
 | `decodeRevert` | `(err, iface) => string` | 按优先级提取原因：`revert.args[0]` → `revert.name` → `reason` → `iface.parseError(rawData)` → `shortMessage` → `info.error.message`。 |
 | `friendlyMessage` | `(reason) => string` | 按 2.1.7 的映射表翻译成中文；识别「用户拒绝」；认不出来则原样返回（超 160 字符截断）。 |
-| `isSepolia` | `(chainId) => boolean` | 容忍 `string` / `number` / `bigint` 三种类型与大小写。 |
 
-#### 2.2.7 `src/lib/format.js` — 格式化与链接
+#### 2.3.6 `src/lib/format.js` — 业务格式化
 
 | 导出 | 签名 | 说明 |
 | --- | --- | --- |
-| `shortAddress` | `(addr) => string` | `0x1234…abcd`。 |
-| `explorerAddress` | `(addr) => string` | Etherscan 地址页链接。 |
+| `shortAddress` | `(addr) => string` | 从 `@wallet` re-export（单一真源）。 |
+| `explorerAddress` | `(addr) => string` | 从 `@wallet` re-export。 |
 | `explorerTx` | `(hash) => string` | Etherscan 交易页链接。 |
 | `explorerNft` | `(contract, tokenId) => string` | NFT 实例页：`/token/{contract}?a={tokenId}`。 |
 | `explorerContract` | `(addr) => string` | 合约页（锚到源码 `#code`）。 |
@@ -438,62 +550,21 @@ const {
 
 ---
 
-### 2.3 钱包登录模块接口 `wallet-login/src/`
+### 2.4 演示壳 `wallet-login/`
 
-`wallet-login/` 是 2.2 里钱包层的独立可运行版本。**钱包层的代码是同一份** —— `useWallet.js` / `ConnectWalletButton` / `NetworkBadge` / `WalletContext` 四个文件的逻辑零改动，差异如下：
+**没有自己的接口** —— 它只是 `@wallet` 的一个消费者，用来演示装配方式并做钱包层的回归入口。
+页面上这几处是自动化测试的稳定锚点，改结构或改文案要同步更新脚本：
 
-| 项 | `frontend/src` | `wallet-login/src` |
-| --- | --- | --- |
-| 链常量文件 | `lib/contract.js`（含 `TICKET_ABI`、`CONTRACT_ADDRESS`） | `lib/chain.js`（**只有链常量，无 ABI、无合约地址**） |
-| 错误表 | `lib/errors.js` 含业务 `REVERT_MAP`（11 条 `Ticket: xxx` → 中文） | 同一文件，**已剔除业务 revert 表**，只留 EIP-1193 错误码 |
-| `lib/format.js` | 8 个函数（地址 / 交易 / NFT / 合约四种链接 + 时间互转） | 只留 `shortAddress` / `explorerAddress` |
-| `useWallet.js` 的 import | `../lib/contract` | `../lib/chain` |
-| 文件头注释 | — | 抽出版额外加了一段注释，说明与父项目的对应关系 |
-
-> ⚠️ 所以 `diff frontend/src/hooks/useWallet.js wallet-login/src/hooks/useWallet.js` 会看到 **7 行差异**（1 行 import + 5 行新增注释 + 1 行空注释），这是**预期**的；只有出现**逻辑差异**才说明两份漂移了。
-
-#### 2.3.1 `wallet-login/src/lib/` 导出
-
-| 模块 | 导出 | 说明 |
-| --- | --- | --- |
-| `chain.js` | `SEPOLIA_CHAIN_ID` / `SEPOLIA_CHAIN_ID_DEC` / `SEPOLIA_RPC_URL` / `SEPOLIA_EXPLORER_URL` / `SEPOLIA_NETWORK_PARAMS` | 与 2.2.4 的同名常量语义一致，**但没有 `TICKET_ABI` 与 `CONTRACT_ADDRESS`**。 |
-| `errors.js` | `isSepolia(chainId) => boolean` | 容忍 `string` / `number` / `bigint` 三种输入（事件给的是 hex 字符串，`getNetwork()` 给的是 bigint）。 |
-| `errors.js` | `codeOf(err) => number \| null` | 从 `err.code` / `err.error.code` / `err.info.error.code` 里挖出 EIP-1193 错误码。 |
-| `errors.js` | `friendlyMessage(err) => string` | 翻译顺序：错误码 → 用户拒绝文案 → Ethers `shortMessage` → 原始 `message`（超 160 字符截断）。 |
-| `format.js` | `shortAddress(addr)` / `explorerAddress(addr)` | 地址缩略与 Etherscan 地址页链接。 |
-
-内置的 EIP-1193 错误码表：
-
-| 错误码 | 含义 |
+| 锚点 | 含义 |
 | --- | --- |
-| `4001` | 你在钱包里取消了这次操作 |
-| `4100` | 钱包未授权（需要先连接钱包） |
-| `4200` | 钱包不支持该方法 |
-| `4900` | 钱包与节点断开连接 |
-| `4901` | 钱包未连接到该网络 |
-| `4902` | 钱包里还没有 Sepolia 这个网络（需先添加）→ 触发 `wallet_addEthereumChain` |
+| `.account-addr` | 连接成功后显示地址（`title` 属性上是完整地址） |
+| `.network-badge` / `.network-badge.ok` / `.network-badge.bad` | 网络徽章与状态 |
+| 唯一一条 `.banner-warn`，文案含「当前网络不是 Sepolia」 | 网络不对时的黄条 |
+| `.inline-error` | 错误文案 |
+| 「连接钱包」/「断开」/「切换到 Sepolia」按钮文字 | 三个操作入口 |
 
-`useWallet()` 的返回结构与 2.2.1 完全相同。该模块的对外接口就是它，外加两个纯展示组件：
-
-| 组件 | Props | 说明 |
-| --- | --- | --- |
-| `ConnectWalletButton` | `{ wallet }` | 按 `status` 渲染「连接钱包 / 断开」或「安装 MetaMask」。 |
-| `NetworkBadge` | `{ wallet }` | 显示当前网络；非 Sepolia 时给「切换到 Sepolia」按钮。 |
-
-**用到的 EIP-1193 方法**：
-
-| 方法 | 何时调用 | 弹不弹窗 |
-| --- | --- | --- |
-| `eth_accounts` | 挂载时静默恢复上次授权 | 不弹 |
-| `eth_requestAccounts` | 点「连接钱包」 | **弹** |
-| `eth_chainId` | 每次判断网络前静默读一次 | 不弹 |
-| `wallet_switchEthereumChain` | 网络不对时切到 Sepolia | **弹** |
-| `wallet_addEthereumChain` | 上一步报 4902（钱包里没这条链）时补一次 | **弹** |
-| `wallet_revokePermissions` | 点「断开」 | 不弹（部分钱包不支持，已 try/catch 吞掉） |
-
-监听事件：`accountsChanged`（换账号 / 钱包锁定）、`chainChanged`（换网络）。
-
-> 该模块的详细说明、状态机图与移植步骤见 [`wallet-login/README.md`](./wallet-login/README.md)。
+> 该模块的详细说明、状态机图与移植步骤见 [`shared/wallet/README.md`](./shared/wallet/README.md)，
+> 演示壳的说明见 [`wallet-login/README.md`](./wallet-login/README.md)。
 
 ---
 

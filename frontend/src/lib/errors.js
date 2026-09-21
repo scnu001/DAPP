@@ -1,4 +1,12 @@
-import { SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_DEC } from "./contract";
+/**
+ * errors.js —— **业务层**错误处理：把合约 revert 翻成人话。
+ *
+ * 分工（与共享钱包模块的 lib/errors.js 互补）：
+ *   钱包层  friendlyWalletError(err)   用户拒绝 / 钱包未授权 / 链不存在…  → 从 `@wallet` 引入
+ *   业务层  decodeRevert(err, iface)   合约 require 字符串 / 自定义 error  → 本文件
+ *           friendlyMessage(reason)    再把上面解析出的 reason 翻成中文
+ * 认不出来时原样返回，UI 兜底展示。
+ */
 
 /** 合约 require 字符串 -> 中文人话提示 */
 const REVERT_MAP = [
@@ -96,13 +104,4 @@ export function friendlyMessage(reason) {
   }
   if (text.length > 160) return `${text.slice(0, 160)}…`;
   return text;
-}
-
-/** 当前 chainId 是否是 Sepolia（容忍大小写与十进制） */
-export function isSepolia(chainId) {
-  if (chainId === undefined || chainId === null || chainId === "") return false;
-  if (typeof chainId === "bigint") return Number(chainId) === SEPOLIA_CHAIN_ID_DEC;
-  if (typeof chainId === "number") return chainId === SEPOLIA_CHAIN_ID_DEC;
-  const raw = String(chainId).toLowerCase();
-  return raw === SEPOLIA_CHAIN_ID.toLowerCase() || Number(raw) === SEPOLIA_CHAIN_ID_DEC;
 }

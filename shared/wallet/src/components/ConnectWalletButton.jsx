@@ -1,12 +1,11 @@
 /**
- * ConnectWalletButton —— 「连接钱包 / 断开」按钮。
- * 与原项目逐字一致，唯一依赖是把 shortAddress/explorerAddress 从 ../lib/format 取。
+ * ConnectWalletButton —— 「连接钱包 / 断开」按钮，纯展示组件。
  *
- * 组件本身不含任何逻辑：它只是按 status 分支渲染，真正的动作都在 useWallet 里。
- *   noMetaMask  → 引导安装
- *   connecting  → 禁用态，等钱包弹窗
- *   无 account  → 「连接钱包」（触发 eth_requestAccounts）
- *   有 account  → 显示缩略地址 + 「断开」（wallet_revokePermissions）
+ * 只从 props 拿到 wallet 对象（useWallet 的返回值），自己不碰 window.ethereum。
+ * 页面上这几个 class / 文案是稳定的自动化锚点：
+ *   .account-addr  连接成功后显示地址
+ *   .inline-error  错误文案
+ *   「连接钱包」「断开」按钮文字
  */
 import { shortAddress, explorerAddress } from "../lib/format";
 

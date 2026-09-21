@@ -1,4 +1,10 @@
-import { SEPOLIA_CHAIN_ID } from "../lib/contract";
+/**
+ * NetworkBadge —— 网络徽章 + 「切换到 Sepolia」按钮，纯展示组件。
+ *
+ * 只从 props 拿到 wallet 对象；链常量来自 lib/chain.js（不认识任何合约）。
+ * 锚点：.network-badge / .network-badge.ok / .network-badge.bad / .inline-error
+ */
+import { SEPOLIA_CHAIN_ID } from "../lib/chain";
 
 const CHAIN_NAMES = {
   "0x1": "Ethereum 主网",

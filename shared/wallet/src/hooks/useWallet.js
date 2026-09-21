@@ -1,13 +1,19 @@
 /**
- * useWallet —— 钱包登录模块的唯一真源。
+ * useWallet —— 钱包层的唯一实现（single source of truth）。
+ *
+ * ⚠️ 这是 `shared/wallet` 的内部实现，**不要**跨项目直接 import 这个文件路径。
+ *    外部一律走公开入口 `@wallet`（= shared/wallet/src/index.js），
+ *    这样以后内部怎么改，消费方都不用动。
+ *
  * 所有 window.ethereum 调用只出现在这个文件里。
+ * 里面没有任何一行业务代码 —— 搜索 claim / createEvent / TicketNFT / ABI 都找不到。
  *
  * 状态机：
  *   loading → noMetaMask / disconnected ⇄ connecting → connected ⇄ wrongNetwork
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrowserProvider } from "ethers";
-import { SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK_PARAMS } from "../lib/contract";
+import { SEPOLIA_CHAIN_ID, SEPOLIA_NETWORK_PARAMS } from "../lib/chain";
 import { isSepolia } from "../lib/errors";
 
 const hasInjected = () => typeof window !== "undefined" && Boolean(window.ethereum);

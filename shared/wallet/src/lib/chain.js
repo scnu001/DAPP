@@ -1,7 +1,8 @@
 /**
- * chain.js —— 链常量（从门票 DApp 的 lib/contract.js 抽出，**已剔除合约 ABI 与合约地址**）
+ * chain.js —— 链常量。
  *
- * 与原文件的唯一区别：这里没有 TICKET_ABI / CONTRACT_ADDRESS，因为钱包模块不认识任何合约。
+ * 这里**只有**链本身的信息（chainId / RPC / 浏览器 / 加链参数），
+ * 不认识任何合约：没有 ABI，也没有合约地址。想换链只改这一个文件。
  */
 
 /** Sepolia chainId：十六进制字符串（EIP-3326 wallet_switchEthereumChain 要求这种格式） */
@@ -13,6 +14,7 @@ export const SEPOLIA_CHAIN_ID_DEC = 11155111;
 export const SEPOLIA_RPC_URL =
   import.meta.env.VITE_SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
 
+/** 区块链浏览器基地址（只拼 URL，不做任何网络请求） */
 export const SEPOLIA_EXPLORER_URL = "https://sepolia.etherscan.io";
 
 /** wallet_addEthereumChain 的参数 —— 处理 4902（钱包里没这条链）时用 */

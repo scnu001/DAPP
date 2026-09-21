@@ -1,6 +1,8 @@
 /**
  * WalletContext —— 把 useWallet 的状态挂到 Context 上，避免 props 层层透传。
- * 与原项目 frontend/src/context/WalletContext.jsx 逐字一致。
+ *
+ * <WalletProvider> 是公开接口的一部分（见 shared/wallet/src/index.js）。
+ * 一个页面只需要在根部包一次，内部任意组件用 useWalletContext() 取钱包。
  *
  * 注意：这里没有做「登录态持久化」——因为钱包本身不产生会话 token，
  * 持久化由钱包（站点授权）负责，刷新页面靠 useWallet 里的 eth_accounts 静默恢复。

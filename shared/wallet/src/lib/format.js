@@ -1,8 +1,8 @@
 /**
- * format.js —— 展示用格式化助手
+ * format.js —— 钱包 UI 用得到的展示助手。
  *
- * 从门票 DApp 的 `frontend/src/lib/format.js` 抽出，只保留钱包 UI 用得到的两个。
- * 原文件里的 explorerTx / explorerNft / formatTime / datetimeLocalToSeconds 都跟合约业务相关，已剔除。
+ * 只负责「地址看起来好看一点 + 拼浏览器链接」，不认识合约、时间戳、tokenId。
+ * 业务层的格式化（explorerTx / explorerNft / formatTime …）在各自项目里。
  */
 import { SEPOLIA_EXPLORER_URL } from "./chain";
 

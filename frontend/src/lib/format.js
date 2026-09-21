@@ -1,14 +1,13 @@
-import { SEPOLIA_EXPLORER_URL } from "./contract";
+/**
+ * format.js —— 业务层展示助手。
+ *
+ * 「地址缩略 + 浏览器地址页」这两个是钱包层的通用能力，直接复用共享模块，不再复制第二份；
+ * 本文件只补合约业务需要的时间 / 交易 / NFT 相关格式化。
+ */
+import { SEPOLIA_EXPLORER_URL } from "@wallet";
 
-/** 0x1234…abcd */
-export function shortAddress(addr) {
-  if (!addr) return "";
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
-
-export function explorerAddress(addr) {
-  return `${SEPOLIA_EXPLORER_URL}/address/${addr}`;
-}
+/* 地址类：单一真源在 @wallet —— 这里 re-export，让老的 `../lib/format` 引用继续可用 */
+export { shortAddress, explorerAddress } from "@wallet";
 
 export function explorerTx(hash) {
   return `${SEPOLIA_EXPLORER_URL}/tx/${hash}`;

@@ -21,12 +21,15 @@ cd frontend && npm install && cp .env.example .env
 自检通过标准：
 
 ```bash
-npm test                      # 13 passing
-cd frontend && npm run build  # 无报错
+npm test                                 # 合约单测：13 passing
+cd frontend     && npm run build         # 无报错
+cd wallet-login && npm run build         # 无报错
 ```
 
-> 💡 只想看钱包模块：`cd wallet-login && npm install && npm run dev`。
+> 💡 只想看钱包层：`cd wallet-login && npm install && npm run dev`。
 > 注意它和 `frontend` 都占 5173 端口，不能同时启动。
+
+> 💡 `shared/wallet/` 是两个前端**共用**的源码，改完**两边都要 build 一次**。
 
 ---
 
@@ -123,8 +126,8 @@ npm test          # 全绿
 
 - 合约：权限检查、CEI 顺序（先改状态再 `_safeMint`）、`indexed` 用法、gas 是否异常
 - 安全：有没有硬编码私钥、有没有把敏感信息写进日志/注释
-- 钱包层：`window.ethereum` **只允许出现在 `useWallet.js`**；事件监听必须 mount-only；
-  换账号要作废旧 signer
+- 钱包层：`window.ethereum` **只允许出现在 `shared/wallet/src/hooks/useWallet.js`**；事件监听必须 mount-only；
+  换账号要作废旧 signer；消费方只允许 `import { … } from "@wallet"`，不许写深层路径
 - 错误处理：revert 原因是否翻译成人类可读的中文
 
 评论礼仪：
@@ -138,9 +141,11 @@ npm test          # 全绿
 
 ## 6. 容易踩的三个坑
 
-1. **改了 `frontend/src/hooks/useWallet.js` 却忘了同步 `wallet-login/`**
-   两份的**逻辑**必须一致。`diff` 正常会输出 7 行（1 行 import + 5 行抽出版特有的文件头注释 + 1 行空注释），
-   出现其它差异才说明漂移。同一次提交里同步，并 `diff` 自查。
+1. **改了 `shared/wallet/` 只跑了一个项目的构建**
+   `frontend/` 与 `wallet-login/` 通过 `@wallet` 别名引用**同一份**源码，
+   所以钱包层一改，两边都要 `npm run build`（CI 也是分开跑两个 build）。
+   想验证运行时行为又不想开钱包扩展：`node e2e/smoke-shared-wallet.mjs wallet-login`，
+   它注入一个假 `window.ethereum`，十几秒跑完 4 个场景。`e2e/` 不入库。
 
 2. **`package-lock.json` 冲突**
    不要手改。删掉重装：`rm -rf node_modules package-lock.json && npm install`，

@@ -1,28 +1,13 @@
 /**
- * 链上常量与 ABI —— 对应教程的 contract.js，但扩展成多活动版本。
+ * contract.js —— **只有**合约相关的东西：部署地址 + ABI。
+ *
+ * 链常量（chainId / RPC / 浏览器 / 加链参数）已经搬到共享钱包模块，
+ * 统一从 `@wallet` 引入 —— 钱包模块不认识合约，业务层也不该再自己维护一份链信息。
+ *   需要链常量：import { SEPOLIA_CHAIN_ID, SEPOLIA_RPC_URL } from "@wallet";
  */
-
-/** Sepolia chainId：十六进制字符串（EIP-3326 要求） */
-export const SEPOLIA_CHAIN_ID = "0xaa36a7";
-/** 十进制形式，用于展示/比对 */
-export const SEPOLIA_CHAIN_ID_DEC = 11155111;
-
-export const SEPOLIA_RPC_URL =
-  import.meta.env.VITE_SEPOLIA_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
-
-export const SEPOLIA_EXPLORER_URL = "https://sepolia.etherscan.io";
 
 /** 部署后填进 frontend/.env 的 VITE_CONTRACT_ADDRESS */
 export const CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS || "").trim();
-
-/** wallet_addEthereumChain 的参数（处理 4902） */
-export const SEPOLIA_NETWORK_PARAMS = {
-  chainId: SEPOLIA_CHAIN_ID,
-  chainName: "Sepolia Testnet",
-  nativeCurrency: { name: "SepoliaETH", symbol: "ETH", decimals: 18 },
-  rpcUrls: ["https://ethereum-sepolia-rpc.publicnode.com"],
-  blockExplorerUrls: ["https://sepolia.etherscan.io"],
-};
 
 /**
  * Human-readable ABI（Ethers v6 支持）。

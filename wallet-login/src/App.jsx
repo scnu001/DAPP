@@ -1,21 +1,21 @@
 /**
- * App.jsx —— 钱包登录模块的独立演示页。
+ * App.jsx —— 共享钱包模块 `@wallet` 的演示壳。
  *
- * 与门票 DApp 的 App.jsx 的区别：这里**没有** useContract / useEvents / 任何合约面板。
- * 页面只做两件事：
- *   1) 组装真实组件（NetworkBadge + ConnectWalletButton），跟原项目里的用法一模一样；
- *   2) 把 useWallet 暴露的原始状态打印出来，方便观察状态机怎么跳。
+ * ⚠️ 这里**没有**任何钱包实现代码：useWallet / WalletContext / 两个组件全部来自 `@wallet`。
+ *    这个目录存在的意义只有两个：
+ *      1) 演示「一个页面要怎么装配钱包模块」—— 包一层 <WalletProvider>，然后取状态、放组件；
+ *      2) 把 useWallet 暴露的原始状态打印出来，方便观察状态机怎么跳。
  *
- * 页面上这几个 class / 文案是稳定锚点，改样式可以，改结构或文案请同步更新 README：
+ *    想读钱包的实现，看 `shared/wallet/src/`；想读合约业务，看 `frontend/src/`。
+ *
+ * 页面上这几个 class / 文案是自动化测试的稳定锚点，改样式可以，改结构或文案请同步更新 README：
  *      .account-addr   连接成功后显示地址
  *      .network-badge  网络徽章（内含「切换到 Sepolia」按钮）
- *      .banner-warn    网络不对时的黄条
+ *      .banner-warn    网络不对时的黄条，文案必须含「当前网络不是 Sepolia」
  *      .inline-error   错误文案
  *      「连接钱包」/「断开」按钮文字
  */
-import { WalletProvider, useWalletContext } from "./context/WalletContext";
-import ConnectWalletButton from "./components/ConnectWalletButton";
-import NetworkBadge from "./components/NetworkBadge";
+import { WalletProvider, useWalletContext, ConnectWalletButton, NetworkBadge } from "@wallet";
 
 const STATUS_LABEL = {
   loading: "loading · 正在静默询问钱包（eth_accounts）",
@@ -36,7 +36,7 @@ function Demo() {
         <div className="brand">
           <h1>钱包登录模块</h1>
           <span className="muted small">
-            独立抽出 · 不含任何合约业务 · React 18 + Vite + Ethers v6
+            共享模块 <code>@wallet</code> 的演示壳 · 不含任何合约业务 · React 18 + Vite + Ethers v6
           </span>
         </div>
         <div className="header-right">
@@ -61,7 +61,7 @@ function Demo() {
 
       <main className="app-main">
         <section className="panel">
-          <h2>当前状态（useWallet 的原始输出）</h2>
+          <h2>当前状态（useWalletContext 的原始输出）</h2>
           <table className="kv">
             <tbody>
               <tr>
@@ -97,7 +97,7 @@ function Demo() {
                   <code>{signer ? "JsonRpcSigner 实例" : "null"}</code>
                   <span className="muted small">
                     {" "}
-                    ← 只用来发交易签名；本模块不做任何交易
+                    ← 业务层拿它去 new Contract(...) 发交易；本模块自己不发交易
                   </span>
                 </td>
               </tr>
@@ -129,13 +129,17 @@ function Demo() {
               「断开」实际调的是 <code>wallet_revokePermissions</code>，撤销本站授权 ——
               MetaMask 没有真正的 disconnect 接口。
             </li>
+            <li>
+              <b>怎么接业务</b>：拿 <code>signer</code> 自己建合约实例即可 ——
+              范例见 <code>frontend/src/hooks/useContract.js</code>（门票 DApp 的铸造 / 领取）。
+            </li>
           </ul>
         </section>
       </main>
 
       <footer className="app-footer">
         <span className="muted small">
-          独立钱包模块 · 不含任何合约业务 · 可直接移植到其它项目
+          共享钱包模块 <code>@wallet</code> · 不含任何合约业务 · 可直接移植到其它项目
         </span>
       </footer>
     </div>

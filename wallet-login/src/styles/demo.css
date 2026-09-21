@@ -1,0 +1,36 @@
+/* 演示壳专属样式。钱包相关的样式全部来自 @wallet/styles/wallet.css（在 main.jsx 里引入）。 */
+
+/* 状态表格：左列是字段名，右列是原始值 */
+.kv {
+  width: 100%;
+  border-collapse: collapse;
+}
+.kv th {
+  text-align: left;
+  width: 110px;
+  padding: 8px 10px 8px 0;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--muted);
+  vertical-align: top;
+  border-top: 1px solid var(--border);
+}
+.kv td {
+  padding: 8px 0;
+  vertical-align: top;
+  border-top: 1px solid var(--border);
+}
+.kv tr:first-child th,
+.kv tr:first-child td {
+  border-top: none;
+}
+
+/* 说明列表 */
+.notes {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+}
+.notes li {
+  margin-bottom: 6px;
+}
