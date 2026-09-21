@@ -15,7 +15,7 @@ cp .env.example .env                    # 只有需要部署合约的人才填�
 cd frontend && npm install && cp .env.example .env
 ```
 
-`frontend/.env` 的 `VITE_CONTRACT_ADDRESS` **直接填 README 第二节那个已部署地址**，
+`frontend/.env` 的 `VITE_CONTRACT_ADDRESS` **直接填 README 顶部表格里的已部署地址**，
 这样全员看到同一份链上数据，不需要各自部署。
 
 自检通过标准：
