@@ -77,7 +77,7 @@ comp7610-ticket-dapp/
 │     ├─ App.jsx                      演示页 + 状态表格
 │     ├─ styles/wallet.css
 │     ├─ context/WalletContext.jsx
-│     ├─ hooks/useWallet.js           与 frontend 那份逐字一致（只差 import 路径）
+│     ├─ hooks/useWallet.js           照搬 frontend 那份（逻辑零改动，另加文件头注释）
 │     ├─ lib/
 │     │  ├─ chain.js                  链常量（无 ABI、无合约地址）
 │     │  ├─ errors.js                 EIP-1193 错误码 + isSepolia
@@ -138,7 +138,7 @@ comp7610-ticket-dapp/
 
 | 文件 | 说明 |
 | --- | --- |
-| `src/hooks/useWallet.js` | 与 `frontend/src/hooks/useWallet.js` **逐字一致**，只差一处 import 路径（`../lib/contract` ↔ `../lib/chain`）。 |
+| `src/hooks/useWallet.js` | 与 `frontend/src/hooks/useWallet.js` 是**同一份代码**：逻辑零改动，只差 import 路径（`../lib/contract` ↔ `../lib/chain`）与文件头多出的一段注释。 |
 | `src/lib/chain.js` | 链常量。相比 `frontend/src/lib/contract.js`，**已剔除** `TICKET_ABI` 与 `CONTRACT_ADDRESS`。 |
 | `src/lib/errors.js` | 已剔除业务 `REVERT_MAP`，只保留 EIP-1193 错误码与 `isSepolia`。 |
 | `src/lib/format.js` | 只保留 `shortAddress` / `explorerAddress`。 |
@@ -440,13 +440,17 @@ const {
 
 ### 2.3 钱包登录模块接口 `wallet-login/src/`
 
-`wallet-login/` 是 2.2 里钱包层的独立可运行版本，接口与 `frontend/src` **逐字一致**，差异只有三处：
+`wallet-login/` 是 2.2 里钱包层的独立可运行版本。**钱包层的代码是同一份** —— `useWallet.js` / `ConnectWalletButton` / `NetworkBadge` / `WalletContext` 四个文件的逻辑零改动，差异如下：
 
 | 项 | `frontend/src` | `wallet-login/src` |
 | --- | --- | --- |
 | 链常量文件 | `lib/contract.js`（含 `TICKET_ABI`、`CONTRACT_ADDRESS`） | `lib/chain.js`（**只有链常量，无 ABI、无合约地址**） |
-| 错误表 | `lib/errors.js` 含业务 `REVERT_MAP` | 同一文件，**已剔除业务 revert 表**，只留 EIP-1193 错误码 |
+| 错误表 | `lib/errors.js` 含业务 `REVERT_MAP`（11 条 `Ticket: xxx` → 中文） | 同一文件，**已剔除业务 revert 表**，只留 EIP-1193 错误码 |
+| `lib/format.js` | 8 个函数（地址 / 交易 / NFT / 合约四种链接 + 时间互转） | 只留 `shortAddress` / `explorerAddress` |
 | `useWallet.js` 的 import | `../lib/contract` | `../lib/chain` |
+| 文件头注释 | — | 抽出版额外加了一段注释，说明与父项目的对应关系 |
+
+> ⚠️ 所以 `diff frontend/src/hooks/useWallet.js wallet-login/src/hooks/useWallet.js` 会看到 **7 行差异**（1 行 import + 5 行新增注释 + 1 行空注释），这是**预期**的；只有出现**逻辑差异**才说明两份漂移了。
 
 #### 2.3.1 `wallet-login/src/lib/` 导出
 

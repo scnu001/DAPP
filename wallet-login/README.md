@@ -143,11 +143,13 @@ loading ──┬─→ noMetaMask                       页面里没有 window.
 | | 路径 | 说明 |
 |---|---|---|
 | 大项目 | `../frontend` | 完整门票 DApp（钱包 + 合约 + 活动面板） |
-| 本模块 | `.` | 只有钱包层，代码与大项目**逐字一致**，唯一区别是 import 路径与剔除了 ABI |
+| 本模块 | `.` | 只有钱包层。钱包层代码与大项目是**同一份**（逻辑零改动），区别是 import 路径、文件头注释，以及剔除了 ABI 与业务错误表 |
 
 改动本模块时如果想同步回大项目，只需要把 `lib/contract` ↔ `lib/chain` 的 import 换回来即可。
-反过来也一样：**改了 `frontend/src/hooks/useWallet.js`，请在同一次提交里同步这一份**，
-并手动 diff 确认只差那一行 import。
+反过来也一样：**改了 `frontend/src/hooks/useWallet.js`，请在同一次提交里同步这一份**。
+
+`diff` 出来会是 **7 行**（1 行 import + 5 行本模块特有的文件头注释 + 1 行空注释），这是预期的；
+**出现其它差异才说明两份漂移了**。
 
 ```bash
 diff frontend/src/hooks/useWallet.js wallet-login/src/hooks/useWallet.js

@@ -139,7 +139,8 @@ npm test          # 全绿
 ## 6. 容易踩的三个坑
 
 1. **改了 `frontend/src/hooks/useWallet.js` 却忘了同步 `wallet-login/`**
-   两份必须逐字一致（只差一行 import）。同一次提交里同步，并 `diff` 自查。
+   两份的**逻辑**必须一致。`diff` 正常会输出 7 行（1 行 import + 5 行抽出版特有的文件头注释 + 1 行空注释），
+   出现其它差异才说明漂移。同一次提交里同步，并 `diff` 自查。
 
 2. **`package-lock.json` 冲突**
    不要手改。删掉重装：`rm -rf node_modules package-lock.json && npm install`，
