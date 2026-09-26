@@ -3,11 +3,15 @@
  *
  * 写操作统一走 runTx：
  *   submitting（钱包确认中）→ pending（拿到 hash）→ success（receipt，解析事件） / error（revert 原因）
+ *
+ * 读路径：活动列表原先是对每个 id 单独调 getEventInfo / ticketOf（N+1），
+ * 现改为经 Multicall3 一次打包（见 lib/multicall.js），JSON-RPC 调用数从 O(N) 降为常数级。
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getAddress } from "ethers";
 import { decodeRevert } from "../lib/errors";
 import { findLog } from "../lib/events";
+import { multicallRead } from "../lib/multicall";
 
 export function useEvents({ wallet, readContract, writeContract }) {
   const [events, setEvents] = useState([]);
@@ -41,7 +45,11 @@ export function useEvents({ wallet, readContract, writeContract }) {
       const n = Number(count);
       const ids = Array.from({ length: n }, (_, i) => i + 1);
 
-      const raws = await Promise.all(ids.map((id) => readContract.getEventInfo(id)));
+      // 一次 eth_call 读回全部活动（原先：N 次单独的 getEventInfo）
+      const raws = await multicallRead(
+        readContract,
+        ids.map((id) => ({ method: "getEventInfo", args: [id] }))
+      );
       const list = raws.map((e, i) => ({
         eventId: ids[i],
         name: e.name,
@@ -58,8 +66,10 @@ export function useEvents({ wallet, readContract, writeContract }) {
       setOwner(ownerAddr);
 
       if (account && n > 0) {
-        const tokens = await Promise.all(
-          ids.map((id) => readContract.ticketOf(id, account))
+        // 同样一次打包（原先：N 次单独的 ticketOf）
+        const tokens = await multicallRead(
+          readContract,
+          ids.map((id) => ({ method: "ticketOf", args: [id, account] }))
         );
         const map = {};
         ids.forEach((id, i) => {

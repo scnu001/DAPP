@@ -9,6 +9,8 @@ import {
 } from "@wallet";
 import { useContract } from "./hooks/useContract";
 import { useEvents } from "./hooks/useEvents";
+import { useCoverUpload } from "./hooks/useCoverUpload";
+import { useLocalCovers } from "./hooks/useLocalCovers";
 import OrganizerPanel from "./components/OrganizerPanel";
 import AttendeePanel from "./components/AttendeePanel";
 import EventCard from "./components/EventCard";
@@ -21,6 +23,17 @@ function Dapp() {
   // 钱包接口 → 合约实例：readContract 用公共 RPC 兜底，writeContract 需要 signer
   const { readContract, writeContract } = useContract(wallet);
   const ticket = useEvents({ wallet, readContract, writeContract });
+  // 本机封面缓存：兜底模式存 data URL，relay 模式存上传后拿回的 Pages 地址。
+  // 顺带让「我的门票」卡片立刻有图，不必等 Pages 那 30-60 秒发布延迟。
+  const covers = useLocalCovers();
+  // 封面流水线：两种模式共用一个状态机，由 VITE_LOCAL_COVER 决定走哪条
+  const cover = useCoverUpload({
+    wallet,
+    onUpdateBaseURI: ticket.updateEventURI,
+    localMode: covers.enabled,
+    saveLocal: covers.save,
+    removeLocal: covers.remove,
+  });
 
   const [busyId, setBusyId] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -82,11 +95,27 @@ function Dapp() {
         </div>
       ) : null}
 
+      {covers.enabled ? (
+        <div className="banner banner-warn">
+          <b>兜底模式已开启</b>（<code>VITE_LOCAL_COVER=on</code>）：活动封面只存在本机浏览器，
+          <b>不上传、不上链</b>，链上 <code>baseURI</code> 保持为空 —— 外部查看器看不到图。
+          正式提交 / 录制 Demo 前把 <code>VITE_LOCAL_COVER</code> 改回 <code>off</code> 并填好{" "}
+          <code>VITE_RELAY_URL</code>。
+          {covers.bytes > 0 ? `（本机已占用约 ${(covers.bytes / 1024).toFixed(0)} KB）` : ""}
+        </div>
+      ) : null}
+
       <main className="app-main">
         <OrganizerPanel
           isOrganizer={ticket.isOrganizer}
           canWrite={canWrite}
           busy={busy}
+          coverTx={cover.coverTx}
+          coverMode={cover.mode}
+          coverReady={cover.ready}
+          covers={covers.covers}
+          onUpload={cover.uploadCoverFile}
+          onClearLocal={cover.clearLocal}
           onCreate={(form) => guard(() => ticket.createEvent(form))}
         />
 
@@ -117,6 +146,13 @@ function Dapp() {
                 busy={busyId === e.eventId}
                 onClaim={(id) => guard(() => ticket.claim(id), id)}
                 onClose={(id) => guard(() => ticket.closeEvent(id), id)}
+                readContract={readContract}
+                coverSrc={covers.covers[String(e.eventId)] || ""}
+                cover={cover.coverTx}
+                coverMode={cover.mode}
+                coverReady={cover.ready}
+                onUpload={cover.uploadCoverFile}
+                onClearLocal={cover.clearLocal}
               />
             ))}
           </div>
@@ -128,7 +164,7 @@ function Dapp() {
       <footer className="app-footer">
         <span className="muted small">
           钱包层来自共享模块 <code>@wallet</code> · 业务层 React 18 + Vite · Ethers v6 · Solidity
-          ^0.8.20 + OpenZeppelin v5 · Sepolia
+          ^0.8.20 + OpenZeppelin v5 · Sepolia · 封面走 {cover.mode === "local" ? "本机兜底" : "relay + GitHub Pages"}
         </span>
       </footer>
     </div>

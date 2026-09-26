@@ -177,3 +177,124 @@
 .tx-error {
   color: #8c2f2f;
 }
+
+/* ------------------------------ 活动封面 ------------------------------ */
+
+.created {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+details.advanced {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+details.advanced > summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+}
+details.advanced[open] > summary {
+  margin-bottom: 10px;
+}
+
+.cover-details {
+  margin-top: 12px;
+}
+
+.cover {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cover .hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+.cover-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.cover-pick input[type="file"] {
+  font-size: 13px;
+  color: var(--text);
+}
+.cover-preview {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.cover-preview img {
+  width: 132px;
+  height: 88px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f2f3f5;
+}
+.cover-preview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.cover-preview-meta p {
+  margin: 0;
+  word-break: break-all;
+}
+.cover-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  word-break: break-all;
+}
+.cover-note-warn {
+  color: #8c5b17;
+}
+.cover-note-ok {
+  color: var(--ok);
+}
+.cover-note code,
+.cover-details code {
+  word-break: break-all;
+}
+
+/* 卡片上的封面缩略图 + 来源标注 */
+
+.card-cover {
+  display: block;
+  width: 100%;
+  height: 132px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #f2f3f5;
+  margin-bottom: 10px;
+}
+.cover-badge {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1.6;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.cover-badge-local {
+  color: #8c5b17;
+  border-color: #f0d9a8;
+  background: #fdf6e8;
+}
+.cover-badge-chain {
+  color: var(--ok);
+  border-color: #b7e4d5;
+  background: #e7f7f1;
+}
+

@@ -1,0 +1,3 @@
+# 复制成 relay/.dev.vars 后填入真实值（该文件已被 .gitignore 排除，不会入库）
+# 生产环境不要用这个文件 —— 用 `npx wrangler secret put GITHUB_TOKEN` 写入 Worker。
+GITHUB_TOKEN=github_pat_在此粘贴你的 token

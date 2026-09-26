@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TicketNFT metadata · GitHub Pages</title>
+    <style>
+      :root {
+        --text: #1f2328;
+        --muted: #666e77;
+        --border: #d9dde2;
+        --surface: #f6f7f9;
+        --ok: #1a7f5a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 32px 20px 64px;
+        font: 14px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+        color: var(--text);
+        background: #fff;
+      }
+      .wrap { max-width: 1040px; margin: 0 auto; }
+      h1 { font-size: 20px; margin: 0 0 6px; }
+      h2 { font-size: 15px; margin: 28px 0 12px; }
+      p { margin: 0 0 10px; }
+      .muted { color: var(--muted); font-size: 13px; }
+      code {
+        font: 12px/1.6 ui-monospace, Consolas, monospace;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 1px 5px;
+        word-break: break-all;
+      }
+      .box {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        background: var(--surface);
+        margin: 16px 0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 14px;
+      }
+      .item {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+      }
+      .item img {
+        display: block;
+        width: 100%;
+        height: 132px;
+        object-fit: cover;
+        background: var(--surface);
+      }
+      .item .body { padding: 10px 12px; }
+      .item h3 { font-size: 13px; margin: 0 0 6px; font-weight: 600; }
+      .item p { margin: 0 0 4px; font-size: 12px; color: var(--muted); }
+      .tag {
+        display: inline-block;
+        font-size: 11px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        border: 1px solid #b7e4d5;
+        background: #e7f7f1;
+        color: var(--ok);
+      }
+      .status { font-size: 13px; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>TicketNFT · 链下 metadata</h1>
+      <p class="muted">
+        这个站点就是 GitHub Pages 的发布根（仓库里的 <code>docs/</code>）。
+        合约只存一个 URL 字符串，真正的文件名与图片都在这里。这一页把
+        <code>events/event-&lt;id&gt;.json</code> 逐个读出来，等于按 NFT 阅读器的方式验证了一遍
+        <code>tokenURI</code> 到底能不能打开。
+      </p>
+
+      <div class="box">
+        <p><b>合约</b> <code id="contract">—</code></p>
+        <p>
+          <b>tokenURI 的拼法</b>
+          <code>tokenURI(id) = baseURI + id + ".json"</code>
+        </p>
+        <p class="muted">
+          所以 <code>baseURI</code> 以 <code>#</code> 结尾时，<code>#</code> 之后的内容浏览器不会发给服务器，
+          整场活动的每张票都读到同一个静态 JSON。
+        </p>
+        <p><b>已发布的 metadata</b> <span id="found" class="status">读取中…</span></p>
+      </div>
+
+      <h2>已上传封面的活动</h2>
+      <div id="grid" class="grid"></div>
+      <p id="empty" class="muted" style="display: none">
+        还没读到任何 <code>events/event-N.json</code>。从 dApp 的主办方控制台（或
+        <code>node relay/upload-cover.mjs</code>）上传一张封面，刷新这里就会出现。
+      </p>
+    </div>
+
+    <script>
+      const CONTRACT = "0x567eC107b7abD99D1882476fb9336cc134de942f";
+      document.getElementById("contract").textContent = CONTRACT;
+
+      const grid = document.getElementById("grid");
+      const empty = document.getElementById("empty");
+      const found = document.getElementById("found");
+
+      const el = (tag, cls, text) => {
+        const n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (text !== undefined) n.textContent = text;
+        return n;
+      };
+
+      async function readJson(url) {
+        try {
+          const res = await fetch(url, { cache: "no-store" });
+          if (!res.ok) return null;
+          return await res.json();
+        } catch {
+          return null;
+        }
+      }
+
+      async function main() {
+        // 只试前 40 场：多试几个不存在的最多多几次 404，代价可以忽略
+        const ids = Array.from({ length: 40 }, (_, i) => i + 1);
+        const rows = await Promise.all(
+          ids.map(async (id) => ({ id, doc: await readJson(`events/event-${id}.json`) }))
+        );
+        const hit = rows.filter((r) => r.doc);
+
+        found.textContent = hit.length ? `共 ${hit.length} 场` : "暂无";
+
+        if (!hit.length) {
+          empty.style.display = "";
+          return;
+        }
+
+        for (const { id, doc } of hit.reverse()) {
+          const card = el("div", "item");
+
+          const img = el("img");
+          img.src = doc.image || "";
+          img.alt = doc.name || `event ${id}`;
+          img.loading = "lazy";
+          img.onerror = () => {
+            img.replaceWith(el("div", "status", "图片还没发布出来（Pages 有 30-60 秒延迟）"));
+          };
+          card.appendChild(img);
+
+          const body = el("div", "body");
+          const h = el("h3", null, `#${id} ${doc.name || ""}`);
+          body.appendChild(h);
+
+          const badge = el("span", "tag", `eventId ${id}`);
+          body.appendChild(badge);
+
+          const a = el("p");
+          const link = el("a", null, "metadata JSON");
+          link.href = `events/event-${id}.json`;
+          link.target = "_blank";
+          link.rel = "noreferrer";
+          a.appendChild(link);
+          body.appendChild(a);
+
+          const p = el("p", null, doc.image || "");
+          body.appendChild(p);
+
+          card.appendChild(body);
+          grid.appendChild(card);
+        }
+      }
+
+      main();
+    </script>
+  </body>
+</html>

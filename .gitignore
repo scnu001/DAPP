@@ -14,9 +14,15 @@ e2e/
 .env.local
 .env.*.local
 
+# Cloudflare Worker 本地调试的密钥文件（relay/），同样绝不入库
+.dev.vars
+**/.dev.vars
+
 # 但示例文件必须进库（同事据此创建自己的 .env）
 !.env.example
 !**/.env.example
+!.dev.vars.example
+!**/.dev.vars.example
 
 # ============================================================
 #  依赖与编译产物
@@ -29,6 +35,7 @@ cache/
 coverage/
 typechain-types/
 .vite/
+.wrangler/
 *.tsbuildinfo
 
 # Vite 每次加载 vite.config.js 会写一个临时文件，正常会自动删；进程被强杀时会残留

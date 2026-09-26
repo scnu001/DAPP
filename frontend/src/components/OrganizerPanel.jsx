@@ -1,7 +1,19 @@
 import { useState } from "react";
 import { datetimeLocalToSeconds } from "../lib/format";
+import CoverUpload from "./CoverUpload";
 
-export default function OrganizerPanel({ isOrganizer, canWrite, busy, onCreate }) {
+export default function OrganizerPanel({
+  isOrganizer,
+  canWrite,
+  busy,
+  coverTx,
+  coverMode,
+  coverReady,
+  covers,
+  onUpload,
+  onClearLocal,
+  onCreate,
+}) {
   const [form, setForm] = useState({
     name: "",
     baseURI: "",
@@ -43,16 +55,6 @@ export default function OrganizerPanel({ isOrganizer, canWrite, busy, onCreate }
           />
         </label>
 
-        <label>
-          元数据基地址（baseURI）
-          <input
-            value={form.baseURI}
-            onChange={(e) => setForm({ ...form, baseURI: e.target.value })}
-            placeholder="https://example.com/meta/ 或 ipfs://CID/"
-          />
-          <span className="hint">最终 tokenURI = baseURI + tokenId + ".json"，留空则不显示图片</span>
-        </label>
-
         <div className="row">
           <label>
             门票上限
@@ -82,14 +84,43 @@ export default function OrganizerPanel({ isOrganizer, canWrite, busy, onCreate }
           </label>
         </div>
 
+        <details className="advanced">
+          <summary>高级：手填 metadata 基地址</summary>
+          <label>
+            元数据基地址（baseURI）
+            <input
+              value={form.baseURI}
+              onChange={(e) => setForm({ ...form, baseURI: e.target.value })}
+              placeholder="ipfs://CID/ 或 https://…/meta/"
+            />
+            <span className="hint">
+              最终 tokenURI = baseURI + tokenId + ".json"。留空即可 —— 建完活动后在下面上传封面，
+              系统会自动把 baseURI 指向 GitHub Pages 上那份 metadata。
+            </span>
+          </label>
+        </details>
+
         <button className="btn btn-primary" type="submit" disabled={!canWrite || busy}>
           {busy ? "处理中…" : "创建活动（上链）"}
         </button>
 
         {newId ? (
-          <p className="success">
-            创建成功：eventId = <b>#{newId}</b>（由 EventCreated 事件解析得到）
-          </p>
+          <div className="created">
+            <p className="success">
+              创建成功：eventId = <b>#{newId}</b>（由 EventCreated 事件解析得到）
+            </p>
+            <CoverUpload
+              eventId={newId}
+              canWrite={canWrite}
+              disabled={busy}
+              coverTx={coverTx}
+              mode={coverMode}
+              ready={coverReady}
+              onUpload={onUpload}
+              onClear={onClearLocal}
+              localCover={covers?.[String(newId)] || ""}
+            />
+          </div>
         ) : null}
       </form>
     </section>

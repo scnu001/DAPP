@@ -1,0 +1,2 @@
+# 这个文件只是为了让空目录能进 git（GitHub Pages 需要 events/ 存在）。
+# 真实内容由 relay Worker 的 POST /upload 写入：events/event-<eventId>.json

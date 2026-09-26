@@ -35,6 +35,8 @@ comp7610-ticket-dapp/
 │  ├─ smoke.js                        本地链冒烟
 │  ├─ smoke-sepolia.js                Sepolia 冒烟
 │  ├─ verify-sepolia.mjs              只读核查线上实例（不发交易）
+│  ├─ bench-reads.mjs                 只读性能基准：逐个调用 vs Multicall3
+│  ├─ publish-frontend.mjs            构建前端并复制到 docs/app/（Pages 发布）
 │  └─ export-remix.js                 导出可粘进 Remix 的合约源码
 ├─ deployments/
 │  └─ sepolia.json                    部署产物：地址 + ABI
@@ -57,7 +59,7 @@ comp7610-ticket-dapp/
 │  ├─ index.html
 │  ├─ vite.config.js                  含 @wallet 别名 → ../shared/wallet/src
 │  ├─ package.json / package-lock.json
-│  ├─ .env.example                    VITE_CONTRACT_ADDRESS
+│  ├─ .env.example                    合约地址 / relay 地址 / 兜底开关三个变量
 │  ├─ 启动本地服务.cmd                Windows 双击即起 dev server
 │  └─ src/
 │     ├─ main.jsx                     入口：挂载 React
@@ -65,15 +67,23 @@ comp7610-ticket-dapp/
 │     ├─ styles/index.css             @import "@wallet/styles/wallet.css" + 业务样式
 │     ├─ hooks/
 │     │  ├─ useContract.js            ★ 钱包接口 → 合约实例（signer → Contract）
-│     │  └─ useEvents.js              活动数据 + 写操作状态机（铸造 / 领取 / 闭场）
+│     │  ├─ useEvents.js              活动数据 + 写操作状态机（铸造 / 领取 / 闭场）
+│     │  ├─ useCoverUpload.js         ★ 封面流水线：relay / 本机两条路共用一个状态机
+│     │  ├─ useLocalCovers.js         本机封面缓存（localStorage）→ React 状态
+│     │  └─ useTicketArt.js           一张票的封面从哪儿来：本机缓存 → tokenURI → JSON
 │     ├─ lib/
 │     │  ├─ contract.js               合约地址 + Human-readable ABI
+│     │  ├─ multicall.js              把 N 个只读调用打包成一次 eth_call（Multicall3）
+│     │  ├─ relay.js                  封面/元数据服务的客户端（无 window.ethereum）
+│     │  ├─ localCover.js             路线 0 兜底：canvas 压缩 + localStorage（默认关）
+│     │  ├─ tokenMetadata.js          按 NFT 阅读器的方式取 tokenURI → JSON → image
 │     │  ├─ errors.js                 revert 解码与中文提示（业务层）
 │     │  ├─ events.js                 receipt 日志解析
 │     │  └─ format.js                 业务格式化（交易 / NFT / 合约链接、时间互转）
 │     └─ components/
-│        ├─ EventCard.jsx             单场活动卡片
-│        ├─ OrganizerPanel.jsx        主办方：开票表单
+│        ├─ EventCard.jsx             单场活动卡片（主办方可见「设置活动封面」）
+│        ├─ OrganizerPanel.jsx        主办方：开票表单 + 建完即传封面
+│        ├─ CoverUpload.jsx           ★ 选图 / 预览 / 上传 / 结果链接
 │        ├─ AttendeePanel.jsx         参与者：我的门票
 │        └─ TxStatus.jsx              交易状态反馈
 ├─ wallet-login/                      @wallet 的演示壳（不含任何钱包实现）
@@ -87,6 +97,17 @@ comp7610-ticket-dapp/
 │     ├─ main.jsx                     引入 @wallet 样式 + 演示样式
 │     ├─ App.jsx                      演示页：组装组件 + 打印原始状态
 │     └─ styles/demo.css              仅本页用到的 .kv / .notes
+├─ relay/                             ★ 封面 / metadata 上传服务（Cloudflare Worker）
+│  ├─ src/index.js                    Worker 本体（单文件，约 210 行含注释）
+│  ├─ wrangler.toml                   name + [vars]：PAGES_BASE / PAGES_DIR …
+│  ├─ test-local.mjs                  本地测试：守卫 / 真签名验签 / 凭据只读检查
+│  ├─ upload-cover.mjs                命令行上传，并自动发 updateEventURI
+│  ├─ 部署.cmd                        Windows 双击：login → secret put → deploy
+│  └─ README.md                       路由表、两条路线对比、信任模型、部署步骤
+├─ docs/                              ★ GitHub Pages 发布根（内容原样挂到站点上）
+│  ├─ index.html                      首页：逐个读 events/*.json，验证 metadata 真可读
+│  ├─ images/event-<id>.<ext>         活动封面（由 relay 写入）
+│  └─ events/event-<id>.json          每场活动的 metadata JSON（同上）
 ├─ hardhat.config.js
 ├─ package.json / package-lock.json
 ├─ .env.example
@@ -115,6 +136,8 @@ comp7610-ticket-dapp/
 | `scripts/smoke.js` | 本地链冒烟：模拟前端的完整调用链（建活动 → 领票 → 重复领取被拒 → 闭场）。 |
 | `scripts/smoke-sepolia.js` | 在 Sepolia 上跑同样的链路，用 `.env` 里的私钥在 Node 侧签名。 |
 | `scripts/verify-sepolia.mjs` | **只读**核查已部署实例：字节码长度、`owner()`、`eventCount()`、每场活动的开放与售罄状态、指定地址的 `ticketOf`。不发任何交易。 |
+| `scripts/bench-reads.mjs` | **只读**性能基准：对比逐个调用与 Multicall3 批量读的 HTTP 请求数 / JSON-RPC 调用数，并校验两种写法结果一致。 |
+| `scripts/publish-frontend.mjs` | 构建 `frontend/` 并把产物复制到 `docs/app/`，于是前端也由 GitHub Pages 静态托管（`/DAPP/app/`）。会在构建前拦住「本地地址被打进线上产物」这类错误。 |
 | `scripts/export-remix.js` | 把合约连同带版本号的 import 生成为 `remix/TicketNFT.sol`，可直接粘进 Remix IDE。 |
 
 ### 1.4 前端 `frontend/`
@@ -125,12 +148,20 @@ comp7610-ticket-dapp/
 | `src/App.jsx` | 组装页面。钱包层全部来自 `@wallet`（`WalletProvider` / `useWalletContext` / 两个组件）；按链上 `owner()` 推导角色，`canWrite` 在合约未配置、网络不对或无 signer 时禁用写操作。 |
 | `src/styles/index.css` | 第一行 `@import "@wallet/styles/wallet.css";` 复用钱包模块的设计 token 与视觉基元，之后只写门票业务自己的样式（表单 / 卡片 / 标签 / 我的门票 / 交易状态）。 |
 | `src/hooks/useContract.js` | **「业务建在钱包接口之上」的范例**：拿 `wallet.provider` / `wallet.signer` 建 `Contract`。只读实例有公共 RPC 兜底，所以不连钱包也能浏览活动列表。 |
-| `src/hooks/useEvents.js` | 活动列表 + 我的门票 + 四类写操作，统一走 `runTx` 状态机；写操作前先 `wallet.ensureSepolia()`。 |
+| `src/hooks/useEvents.js` | 活动列表 + 我的门票 + 四类写操作，统一走 `runTx` 状态机；写操作前先 `wallet.ensureSepolia()`。**读路径经 `lib/multicall.js` 一次打包**，不再逐个 id 调用（见 2.3.7）。 |
 | `src/lib/contract.js` | **只有**合约地址与 `TICKET_ABI`（链常量已上移到 `@wallet`）。 |
+| `src/lib/multicall.js` | 把 N 个只读调用打包成一次 `eth_call`（Multicall3），把 JSON-RPC 调用数从 O(N) 降为常数级；失败时回退为逐个调用。 |
+| `src/lib/relay.js` | 链下 metadata 服务的客户端：拼 multipart、解析错误、`pingRelay()` 健康探测。**没有 `window.ethereum`、没有私钥** —— 签名由上层从 `wallet.signer` 拿。 |
+| `src/hooks/useCoverUpload.js` | 封面流水线状态机，**relay / 本机两条路共用一个**：relay 走 `ensureSepolia → signMessage → POST /upload → updateEventURI`；本机兜底走 `shrinkImage → localStorage`。状态为 `signing / uploading / updating / done / error`。 |
+| `src/hooks/useLocalCovers.js` | 把 `lib/localCover.js` 的 localStorage 存储包成 React 状态，并统计本机已占用的字节数（用于兑现「兜底模式的代价」这句话）。 |
+| `src/hooks/useTicketArt.js` | 一张票的封面从哪儿来：本机缓存 → `tokenURI` → 取那份 JSON 的 `image`。**只在「自己持有这张票」时才去拉**（见 2.3.8）。 |
+| `src/components/CoverUpload.jsx` | 封面控件：选图、本地预览、上传/保存按钮、结果链接。`file` 与 `preview` **必须在同一个 handler 里同生同灭** —— 曾经 `preview` 由 `useEffect(file)` 派生，`setFile(null)` 之后会先渲染出一帧 `file === null`，`{file.name}` 抛异常把整个 React 树打崩（无错误边界 ⇒ 白屏）；现在两者一起改，渲染处另有 `preview && file` 兜底。 |
+| `src/lib/localCover.js` | **路线 0 兜底**：canvas 缩放重编码（≤960×600，优先 WebP、回退 JPEG）+ `localStorage` 读写。默认关闭，由 `VITE_LOCAL_COVER` 控制。 |
+| `src/lib/tokenMetadata.js` | `toFetchable()`（`ipfs://` → 网关）与 `fetchTokenMetadata()`（带会话内缓存的 fetch）。**故意不特殊处理 `#`** —— 浏览器本来就会在发请求前丢掉 fragment。 |
 | `src/lib/errors.js` | 业务层错误：从 Ethers v6 各种错误形态里挖出 revert 原因，并翻译成中文。 |
 | `src/lib/events.js` | 解析交易回执日志（交易函数的返回值只能从事件里拿）。 |
 | `src/lib/format.js` | 业务格式化（交易 / NFT / 合约链接、时间互转）；`shortAddress` / `explorerAddress` 从 `@wallet` re-export，不再各写一份。 |
-| `src/components/*.jsx` | 4 个纯展示业务组件：活动卡片、主办方面板、参与者面板、交易状态。（钱包按钮与网络徽章已移入 `@wallet`。） |
+| `src/components/*.jsx` | 5 个业务组件：活动卡片、主办方面板、封面上传、参与者面板、交易状态。（钱包按钮与网络徽章已移入 `@wallet`。） |
 | `启动本地服务.cmd` | Windows 双击即 `npm run dev`；缺 `node_modules` 会先 `npm install`。 |
 
 ### 1.5 共享钱包模块 `shared/wallet/` ★
@@ -186,6 +217,41 @@ resolve: { alias: { "@wallet": fileURLToPath(new URL("../shared/wallet/src", imp
 | `.env.example` | 根目录环境变量模板（`DEPLOYER_PRIVATE_KEY` / `TEST_CLAIMER_PRIVATE_KEY`）。**真实 `.env` 不入库。** |
 | `CONTRIBUTING.md` | 环境准备、分支与提交规范、PR 与代码评审要求。 |
 | `.github/` | CODEOWNERS、PR 模板、两个 Issue 模板、CI 流水线（合约测试 + 两个前端构建）。 |
+
+### 1.8 链下 metadata 托管 `relay/` + `docs/` ★
+
+NFT 的 `tokenURI` 只是一个**字符串**，指向一个必须能被公网 GET 到的 URL；合约里
+`tokenURI = baseURI + tokenId + ".json"`（`contracts/TicketNFT.sol:139`）。
+所以「让门票显示封面」本质上只有两个问题：**图片放哪儿**、**谁有权限往上放**。
+
+| 文件 | 说明 |
+| --- | --- |
+| `relay/src/index.js` | Cloudflare Worker，单文件。`POST /upload` 验签后把封面 + metadata JSON 提交进 `docs/`；`GET /meta/<tokenId>.json` 是可选的动态路线 |
+| `relay/test-local.mjs` | 本地测试。Worker 只用标准 Web API，所以能直接在 Node 22 里 `import` 当函数调用 —— **不需要 Cloudflare 账号、不需要部署** |
+| `relay/upload-cover.mjs` | 命令行上传（走完全相同的 `/upload` 代码路径），并自动发 `updateEventURI`。**不部署 Worker 也能用** |
+| `relay/部署.cmd` | Windows 双击完成 `wrangler login` → `secret put GITHUB_TOKEN` → `deploy` |
+| `docs/index.html` | Pages 首页：逐个读 `events/event-*.json` 并渲染，等于按 NFT 阅读器的方式验证了一遍 `tokenURI` |
+| `docs/images/` `docs/events/` | 封面与 metadata JSON 的实际存放位置（Pages 的站点根就是 `docs/`） |
+
+**为什么 baseURI 以 `#` 结尾**：
+
+```
+baseURI      = https://scnu001.github.io/DAPP/events/event-3.json#
+tokenURI(12) = https://scnu001.github.io/DAPP/events/event-3.json#12.json
+                                                                  └── HTTP 请求时被忽略
+```
+
+`#` 之后的内容浏览器不会发给服务器，于是整场活动的每张票读**同一份**静态 JSON ——
+读路径零依赖、不需要按 tokenId 预生成文件；而每张票的 `tokenURI` 字符串仍然互不相同
+（`#12.json` vs `#13.json`），唯一性不受影响。代价是同一场活动的票共用一份 metadata
+（名字里带不了各自的 tokenId，但钱包本来就会自己显示 `#12`）。
+
+**兜底路线 `VITE_LOCAL_COVER=on`**：把封面只压进本机浏览器（localStorage），不签名、不上传、
+不上链 —— 换来的是一份**离线也能演示的完整交互**（relay 未部署、或临时坏掉时不至于 Demo 开天窗）。
+代价是链上 `baseURI` 仍为空、外部查看器看不到图，所以界面会同时打出「封面：本机（未上链）」
+角标与顶部黄条 —— **这条路线绝不能冒充「metadata 已上链」**。默认关闭，一个环境变量即可切换。
+
+详见 [`relay/README.md`](./relay/README.md) 与 [`docs/README.md`](./docs/README.md)。
 
 ---
 
@@ -548,6 +614,67 @@ const {
 | `toDatetimeLocal` | `(seconds) => string` | `0` → `""`，用于表单回显。 |
 | `datetimeLocalToSeconds` | `(value) => number` | `datetime-local` 的值 → `uint64` 秒（本地时区）。 |
 
+#### 2.3.7 `src/lib/multicall.js` — 批量只读调用（性能优化）
+
+| 导出 | 签名 | 说明 |
+| --- | --- | --- |
+| `MULTICALL3_ADDRESS` | `string` | Multicall3 地址 `0xcA11bde05977b3631167028862bE2a173976CA11`，Sepolia 等多链同址，无需自己部署。 |
+| `MULTICALL3_ABI` | `string[]` | 只含 `aggregate3`，**按只读声明为 `view`**。 |
+| `multicallRead` | `(contract, calls) => Promise<unknown[]>` | 把 `[{ method, args }]` 打包成一次 `eth_call`，返回与入参一一对应的解码结果；失败时回退为逐个调用。 |
+
+**为什么需要它。** Ethers v6 的 `JsonRpcProvider` 已在 HTTP 层做 JSON-RPC 批处理，所以读 N 个活动**不会**变成 N 次 HTTP 请求 —— 这一点是实测确认的，不要想当然。真正的成本是 **JSON-RPC 调用数随 N 线性增长**：免费 RPC 按调用数 / 计算单元计费，且批大小超过 `batchMaxCount`（默认 100）会被切成多个请求，部分公共 RPC 还会直接拒绝过大的批。
+
+改前改后实测（`node scripts/bench-reads.mjs`）：
+
+| 活动数 | 改前 HTTP / JSON-RPC | 改后 HTTP / JSON-RPC |
+| --- | --- | --- |
+| 12（当前） | 2 / 26 | 2 / **4** |
+| 50 | 1 / 51 | 1 / **2** |
+| 200 | 3 / 201 | 1 / **2** |
+| 500 | 6 / 501 | 1 / **2** |
+
+**两个实现要点（都实测踩过）**：
+
+1. 合约里 `aggregate3` 声明为 `payable`。若照抄这个 ABI，ethers 会把它当写方法去 `eth_sendTransaction`，报 `UNSUPPORTED_OPERATION`。所以这里**故意按 `view` 声明** —— 编码与解码完全一致，只是让 ethers 走 `eth_call`。
+2. `decodeFunctionResult` 返回的是「outputs 数组」。只有一个 output 时（元组返回值很常见）必须取 `[0]`，否则拿到的是包了一层的 `Result`，字段名取不到 —— 这个坑会让「两种写法结果不一致」的假象出现。
+
+#### 2.3.8 `src/lib/localCover.js` · `src/lib/tokenMetadata.js` · `src/hooks/useTicketArt.js` — 封面来源与兜底模式
+
+| 导出 | 签名 | 说明 |
+| --- | --- | --- |
+| `LOCAL_COVER_ENABLED` | `boolean` | 由 `VITE_LOCAL_COVER` 决定，取值为 `on / true / 1 / yes` 时为真，**默认关闭**。 |
+| `shrinkImage` | `(file, { maxW?, maxH?, quality? }) => Promise<string>` | canvas 缩放重编码，默认 ≤ 960×600、`quality 0.82`；优先 WebP，浏览器不支持时回退 JPEG（靠 `out.startsWith("data:image/webp")` 判断）。 |
+| `dataUrlBytes` | `(dataUrl) => number` | 由 base64 长度反推真实字节数（base64 每 4 字符 3 字节，再减 padding）。 |
+| `loadLocalCovers` / `saveLocalCover` / `removeLocalCover` / `clearLocalCovers` | `(eventId[, src]) => …` | 本机封面缓存，键 `tkt:cover:<合约地址>:<eventId>`。`save` 在配额耗尽时抛带中文说明的错误。 |
+| `toFetchable` | `(uri) => string` | `ipfs://` → `https://ipfs.io/ipfs/`，其余原样返回。 |
+| `fetchTokenMetadata` | `(tokenUri) => Promise<object>` | 按 NFT 阅读器的方式 GET 那份 JSON，带会话内 `Map` 缓存。**故意不特殊处理 `#`** —— 浏览器本来就会在发请求前丢掉 fragment，不处理正好当作端到端证明。 |
+| `useTicketArt` | `({ readContract, tokenId, localSrc }) => { state, image, doc? }` | 一张票的封面从哪儿来，优先级见下。 |
+
+`useTicketArt` 的优先级本身就是「哪条路线更权威」的表达：
+
+```
+1. 本机缓存   → state: "local"                          已确认看得见（但不代表链上可读）
+2. tokenURI   → fetch → 用那份 JSON 的 image → "chain"   ★ 这条才证明 metadata 真的上链可读
+3. 都没有     → "empty"（baseURI 为空）/ "unreachable"（URL 取不到）
+```
+
+第 2 条完全不看前端自己的任何状态，所以**只要卡片能显出图，就说明 `tokenURI → JSON → image`
+这条链真的通了**。只在「自己持有这张票」时才去拉（`EventCard` 传 `myTokenId`）——
+12 张卡片各拉一次外部 JSON 既慢又没必要。
+
+**兜底模式在做什么、不做什么** —— `VITE_LOCAL_COVER=on` 时两条路线的对照：
+
+| | relay 模式（默认，路线 2） | 本机兜底（路线 0） |
+| --- | --- | --- |
+| 图片存放 | `docs/images/`（GitHub Pages 公网可取） | 只在本机浏览器 `localStorage` |
+| 签名 / 上传 | 签名 + `POST /upload` | 都不做 |
+| 发交易 | 发一笔 `updateEventURI`（花 gas） | **不发**，链上 `baseURI` 保持为空 |
+| `tokenURI()` | Pages 上的 metadata URL | **空字符串** ⇒ 外部查看器看不到图 |
+| 界面标注 | `封面：链上 metadata` | `封面：本机（未上链）` + 顶部黄条 |
+
+它换来的是「relay 没部署、或部署坏了的时候，这份作业仍然能演示完整交互」；
+代价必须写在界面上，而不是藏在文档里。
+
 ---
 
 ### 2.4 演示壳 `wallet-login/`
@@ -565,6 +692,55 @@ const {
 
 > 该模块的详细说明、状态机图与移植步骤见 [`shared/wallet/README.md`](./shared/wallet/README.md)，
 > 演示壳的说明见 [`wallet-login/README.md`](./wallet-login/README.md)。
+
+---
+
+### 2.5 链下 metadata 服务 `relay/`
+
+它**不是业务后端**：不碰合约状态、不持私钥、不做权限判断。权限判定始终在链上 ——
+它把签名恢复出的地址与 `getEventInfo().organizer` 比对，自己只是**核对者**。
+
+| 方法 | 路径 | 入参 | 返回 |
+| --- | --- | --- | --- |
+| `POST` | `/upload` | multipart：`eventId` + `timestamp` + `signature` + `image` | `{ ok, image, metadata, baseURI, commits, note }` |
+| `GET` | `/meta/<tokenId>.json` | — | 该 token 的 metadata JSON（`cache-control: max-age=60`） |
+| `GET` | `/health` | — | `{ ok, contract, pages, pagesDir, repo, githubTokenConfigured }` |
+
+**`/upload` 的校验顺序**（每一步失败都给出明确原因，顺序即权限边界）：
+
+| # | 检查 | 失败返回 |
+| --- | --- | --- |
+| 1 | 四个字段齐全 | `400` 缺少 eventId / timestamp / signature / image |
+| 2 | `eventId` 匹配 `^\d+$` —— 它会参与拼仓库路径，不卡就能写仓库别的地方 | `400` |
+| 3 | `abs(now − timestamp) ≤ 300s`（防重放） | `400` 签名已过期 |
+| 4 | MIME 在 `png / jpeg / webp / gif` 允许列表里（**故意不收 SVG** —— SVG 能内嵌 `<script>`，而 Pages 是静态站） | `400` |
+| 5 | 非空且 ≤ 2 MB | `400` / `413` |
+| 6 | 链上 `getEventInfo(eventId).organizer != 0x0`（合约对不存在的活动返回零值结构体，不会 revert） | `404` |
+| 7 | `verifyMessage("ticket-cover:<eventId>:<timestamp>", signature) == organizer` | `403` 签名与活动主办方不符 |
+
+**前端对应的调用链**（`src/hooks/useCoverUpload.js`）：
+
+```
+wallet.ensureSepolia()                             幂等：已在本网立即返回
+  → wallet.signer.signMessage("ticket-cover:…")    弹一次钱包确认；不上链、不花 gas
+  → POST <VITE_RELAY_URL>/upload                   拿回 { image, metadata, baseURI }
+  → writeContract.updateEventURI(eventId, baseURI) ★ 这一步才上链、才花 gas
+```
+
+两次钱包动作是**刻意分开**的：签名只证明「你是这场活动的主办方」，改状态的是那笔交易。
+
+**为什么 PAT 不能放前端**：往仓库写文件 = 创建一个 commit，GitHub 没有免凭据的写接口；
+而前端 JS 是公开下载的，Vite 里带 `VITE_` 前缀的变量还会被主动打进 bundle。
+所以浏览器只出示**签名**，PAT 留在 Worker 的 `secret` 里 —— 两边各拿一半，谁都单独用不了。
+
+**MVP 降级路径**：不注册 Cloudflare 也能完成同样的事 ——
+`node relay/upload-cover.mjs <eventId> <图片路径>` 走的是**完全相同的 `/upload` 代码路径**，
+只是把 PAT 从 secret 换成本机 `relay/.dev.vars`，把签名从钱包换成 `.env` 里的私钥。
+差别只在「谁来点这个上传」。
+
+**兜底路线（完全不依赖 relay）**：`frontend/.env` 里把 `VITE_LOCAL_COVER` 设为 `on`，
+封面就改为「canvas 压缩 → `localStorage`」，不签名、不上传、不上链（接口与对照表见 2.3.8）。
+默认 `off`；正式提交与录制 Demo 前应保持 `off` 并配好 `VITE_RELAY_URL`。
 
 ---
 

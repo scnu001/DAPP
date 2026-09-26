@@ -1,0 +1,17 @@
+# Cloudflare Worker 配置。`wrangler deploy` 会直接读这个文件。
+name = "ticket-dapp-relay"
+main = "src/index.js"
+compatibility_date = "2026-09-26"
+# ethers 在 Worker 里需要 node 兼容层
+compatibility_flags = ["nodejs_compat"]
+
+# 公开配置（可以进仓库）。密钥不要写在这里，用 `wrangler secret put GITHUB_TOKEN`。
+[vars]
+GITHUB_REPO = "scnu001/DAPP"
+# GitHub Pages 的站点根（Settings → Pages → Source = main / docs 之后就是它）
+PAGES_BASE = "https://scnu001.github.io/DAPP"
+# 仓库里作为 Pages 发布根的目录。GitHub 会把 docs/ 的内容挂在站点根上，
+# 所以仓库路径 docs/images/event-3.png 对应的公网地址是 <PAGES_BASE>/images/event-3.png。
+PAGES_DIR = "docs"
+RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com"
+CONTRACT_ADDRESS = "0x567eC107b7abD99D1882476fb9336cc134de942f"

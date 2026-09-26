@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { explorerAddress, explorerNft, formatTime, shortAddress } from "../lib/format";
 import { CONTRACT_ADDRESS } from "../lib/contract";
+import { useTicketArt } from "../hooks/useTicketArt";
+import CoverUpload from "./CoverUpload";
 
 function statusOf(e, myTokenId, now) {
   if (!e.open) return { key: "closed", text: "已关闭", claimable: false };
@@ -10,6 +13,12 @@ function statusOf(e, myTokenId, now) {
   return { key: "open", text: "可领取", claimable: true };
 }
 
+/** 封面来源的标注 —— 「链上可读」和「只是本机看着有」必须一眼能分清 */
+const ART_LABEL = {
+  local: { text: "封面：本机（未上链）", cls: "cover-badge-local" },
+  chain: { text: "封面：链上 metadata", cls: "cover-badge-chain" },
+};
+
 export default function EventCard({
   event,
   myTokenId,
@@ -18,13 +27,39 @@ export default function EventCard({
   busy,
   onClaim,
   onClose,
+  readContract,
+  coverSrc,
+  cover,
+  coverMode,
+  coverReady,
+  onUpload,
+  onClearLocal,
 }) {
+  const [imgFailed, setImgFailed] = useState(false);
+
   const now = Math.floor(Date.now() / 1000);
   const st = statusOf(event, myTokenId, now);
   const pct = event.maxSupply ? Math.round((event.minted / event.maxSupply) * 100) : 0;
 
+  // 只在「自己持有这张票」时才去拉链上 metadata（见 useTicketArt 的注释）
+  const art = useTicketArt({ readContract, tokenId: myTokenId, localSrc: coverSrc });
+  const badge = ART_LABEL[art.state];
+
   return (
     <div className="card">
+      {art.image && !imgFailed ? (
+        <>
+          <img
+            className="card-cover"
+            src={art.image}
+            alt={`${event.name || "活动"} 封面`}
+            loading="lazy"
+            onError={() => setImgFailed(true)}
+          />
+          {badge ? <span className={`cover-badge ${badge.cls}`}>{badge.text}</span> : null}
+        </>
+      ) : null}
+
       <div className="card-head">
         <div>
           <h3>
@@ -75,6 +110,24 @@ export default function EventCard({
           </button>
         ) : null}
       </div>
+
+      {isOrganizer ? (
+        <details className="advanced cover-details">
+          <summary>设置活动封面（链上 baseURI {event.baseURI ? "已配置" : "未配置"}）</summary>
+          <CoverUpload
+            eventId={event.eventId}
+            canWrite={canWrite}
+            disabled={busy}
+            coverTx={cover}
+            mode={coverMode}
+            ready={coverReady}
+            onUpload={onUpload}
+            onClear={onClearLocal}
+            localCover={coverSrc}
+            currentBaseURI={coverMode === "relay" ? event.baseURI : undefined}
+          />
+        </details>
+      ) : null}
     </div>
   );
 }

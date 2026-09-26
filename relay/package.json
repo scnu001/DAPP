@@ -1,0 +1,22 @@
+{
+  "name": "ticket-dapp-relay",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "门票 DApp 的最小上传 / 元数据服务（Cloudflare Worker）",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "secret": "wrangler secret put GITHUB_TOKEN",
+    "tail": "wrangler tail",
+    "test": "node test-local.mjs"
+  },
+  "dependencies": {
+    "@cloudflare/workerd-windows-64": "^1.20250718.0",
+    "@esbuild/win32-x64": "^0.17.19",
+    "ethers": "^6.13.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  }
+}
