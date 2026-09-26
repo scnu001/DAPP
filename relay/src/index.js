@@ -69,6 +69,14 @@ const pagesBase = (env) => String(env.PAGES_BASE || "").replace(/\/+$/, "");
 /** 仓库里作为 Pages 发布根的目录，默认 docs */
 const pagesDir = (env) => String(env.PAGES_DIR || "docs").replace(/^\/+|\/+$/g, "");
 
+/**
+ * GitHub Contents API 的基地址。
+ * 默认官方 api.github.com；可用 GITHUB_API 覆盖 —— GitHub Enterprise 要用它，
+ * 而 relay/test-e2e-local.mjs 也是靠它把请求指到本地那个「假 GitHub」上，
+ * 从而在**不需要 PAT、不需要真实仓库**的前提下把整条写路径跑通。
+ */
+const githubApi = (env) => String(env.GITHUB_API || "https://api.github.com").replace(/\/+$/, "");
+
 /** 仓库内路径 → 例：docs/images/event-3.png */
 const repoPath = (env, rel) => `${pagesDir(env)}/${rel}`;
 
@@ -91,6 +99,7 @@ export default {
           pages: pagesBase(env),
           pagesDir: pagesDir(env),
           repo: env.GITHUB_REPO,
+          githubApi: githubApi(env),
           githubTokenConfigured: Boolean(env.GITHUB_TOKEN),
         });
       }
@@ -213,7 +222,7 @@ async function putFile(env, path, bytes, message) {
     };
   }
 
-  const api = `https://api.github.com/repos/${env.GITHUB_REPO}/contents/${path}`;
+  const api = `${githubApi(env)}/repos/${env.GITHUB_REPO}/contents/${path}`;
   const headers = {
     authorization: `Bearer ${env.GITHUB_TOKEN}`,
     accept: "application/vnd.github+json",

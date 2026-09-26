@@ -9,7 +9,9 @@
     "deploy": "wrangler deploy",
     "secret": "wrangler secret put GITHUB_TOKEN",
     "tail": "wrangler tail",
-    "test": "node test-local.mjs"
+    "test": "node test-local.mjs && node test-e2e-local.mjs",
+    "test:guards": "node test-local.mjs",
+    "test:e2e": "node test-e2e-local.mjs"
   },
   "dependencies": {
     "@cloudflare/workerd-windows-64": "^1.20250718.0",

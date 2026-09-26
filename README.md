@@ -227,7 +227,8 @@ NFT 的 `tokenURI` 只是一个**字符串**，指向一个必须能被公网 GE
 | 文件 | 说明 |
 | --- | --- |
 | `relay/src/index.js` | Cloudflare Worker，单文件。`POST /upload` 验签后把封面 + metadata JSON 提交进 `docs/`；`GET /meta/<tokenId>.json` 是可选的动态路线 |
-| `relay/test-local.mjs` | 本地测试。Worker 只用标准 Web API，所以能直接在 Node 22 里 `import` 当函数调用 —— **不需要 Cloudflare 账号、不需要部署** |
+| `relay/test-local.mjs` | 本地测试（守卫 / 验签 / 凭据只读检查）。Worker 只用标准 Web API，所以能直接在 Node 22 里 `import` 当函数调用 —— **不需要 Cloudflare 账号、不需要部署** |
+| `relay/test-e2e-local.mjs` | **整链端到端**（38 项）：前端真实上传客户端 → 真实 Worker → 假 GitHub Contents API → 本地静态服务器扮演 Pages → 按 NFT 阅读器的方式取 `tokenURI`。把「`baseURI` 以 `#` 结尾」这类设计从推理变成可执行事实，**不需要 PAT、不发交易** |
 | `relay/upload-cover.mjs` | 命令行上传（走完全相同的 `/upload` 代码路径），并自动发 `updateEventURI`。**不部署 Worker 也能用** |
 | `relay/部署.cmd` | Windows 双击完成 `wrangler login` → `secret put GITHUB_TOKEN` → `deploy` |
 | `docs/index.html` | Pages 首页：逐个读 `events/event-*.json` 并渲染，等于按 NFT 阅读器的方式验证了一遍 `tokenURI` |

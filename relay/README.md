@@ -134,6 +134,40 @@ node relay/test-local.mjs        # 在仓库根目录执行
 
 > A / B 两阶段刻意用**不带 token** 的 env，所以这个脚本永远不会真的往仓库写东西。
 
+## 整链端到端（照样不需要 PAT、不需要 Cloudflare、不发交易）
+
+```bash
+node relay/test-e2e-local.mjs        # 38 项检查
+# 或：cd relay && npm run test:e2e
+```
+
+上面那个脚本只测 Worker 自己的守卫与验签。这个则把**整条路线 2 跑通** ——
+三个「外部世界」换成进程内的替身，中间全是真的：
+
+```
+前端的真实上传客户端            relay 的真实 Worker            假的 GitHub Contents API
+frontend/src/lib/relay.js  →  relay/src/index.js         →  http://127.0.0.1:A
+（真 fetch + 真 multipart）    （真验签 + 真 putFile）        （写临时目录；GET 返真 git blob sha，
+                                                              PUT 带 sha 才算覆盖 —— 与真 GitHub 同语义）
+                                                                   ↓
+                                     本地静态服务器（扮演 GitHub Pages）http://127.0.0.1:B
+                                                                   ↓
+                            按 NFT 阅读器的方式取 tokenURI → JSON → image，逐个断言 200
+```
+
+它回答的是那些**只有真部署之后才会暴露**的问题：
+
+- `baseURI` 以 `#` 结尾到底成不成立 —— 拿**带 fragment 的完整 tokenURI 字符串**去 fetch，
+  三个不同 tokenId 都必须 200 且读到同一份 JSON；反证是「把 tokenId 直接拼进路径」时 Pages 上 404。
+- 前端的 `coverSignMessage()` 与 Worker 验签用的字符串**是不是同一个**（两处各改一处就会失败）。
+- Worker 有没有把 `GITHUB_TOKEN` 放进 `Authorization`（真 GitHub 没它会 401）。
+- 覆盖已存在的文件时有没有带 `sha`（不带真 GitHub 会拒）。
+- metadata JSON 的形状、`image` 是否可取、字节是否一致。
+
+> 想调整替身的行为就改脚本里的 `ghServer` / `pagesServer`；
+> `GITHUB_API` 这个 env 就是为它准备的（GitHub Enterprise 也用它）。
+> 临时产物留在系统 temp 里（脚本末尾会打印路径），可以直接翻那个「仓库」。
+
 ## 部署（三步）
 
 前置：一个免费 Cloudflare 账号（GitHub 登录即可）+ 一份 fine-grained PAT。
@@ -176,7 +210,8 @@ RELAY=https://ticket-dapp-relay.<你的子域>.workers.dev
 
 curl -s $RELAY/health
 # {"ok":true,"contract":"0x567eC1…942f","pages":"https://scnu001.github.io/DAPP",
-#  "pagesDir":"docs","repo":"scnu001/DAPP","githubTokenConfigured":true}
+#  "pagesDir":"docs","repo":"scnu001/DAPP","githubApi":"https://api.github.com",
+#  "githubTokenConfigured":true}
 
 curl -s $RELAY/meta/12.json
 # {"name":"Headless Mint 14:05:09 Ticket #12", …, "image":"https://scnu001.github.io/DAPP/images/event-12.png"}
